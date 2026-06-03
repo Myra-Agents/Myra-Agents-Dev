@@ -1,0 +1,10 @@
+# Member repos cloned by bootstrap.sh — each is its own git repo, not tracked here.
+/app/
+/shared/
+/hub/
+/server/
+/plugins/
+
+# junk
+.DS_Store
+*.bun-build
