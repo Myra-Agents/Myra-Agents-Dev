@@ -65,7 +65,7 @@ case "${1:-help}" in
     esac
     [ -n "$bin" ] || { echo "open manually (no cursor/code CLI on PATH): $ws"; exit 1; }
     command -v "$bin" >/dev/null 2>&1 || { echo "✗ '$bin' CLI not on PATH" >&2; exit 1; }
-    echo "${c_grn}▶${c_rst} opening in $bin…"; "$bin" "$ws" ;;
+    echo "${c_grn}▶${c_rst} opening in ${bin}..."; "$bin" "$ws" ;;
 
   shared-pull)
     for r in app hub; do
