@@ -64,3 +64,15 @@ This file governs only the bootstrap scripts.
 bash -n bootstrap.sh && bash -n dev.sh      # syntax
 ./bootstrap.sh --check                       # toolchain probe, no clone
 ```
+
+## Branching
+
+GitFlow-lite, **org-wide** across all Myra-Agents repos:
+
+- `main` — stable, released code; **tagged releases only**, never commit straight to it.
+- `develop` — **default branch**; all day-to-day work integrates here.
+- `feature/<slug>` · `fix/<slug>` · `chore/<slug>` — short-lived, branch off `develop`, PR back into `develop`.
+- Release: merge `develop` → `main` + tag (`vX.Y.Z`; server uses `server-vX.Y.Z`).
+- Hotfix: branch off `main`, PR into `main`, then merge `main` back to `develop`.
+
+Open PRs against `develop`. Conventional Commit subjects. One logical change per PR.
