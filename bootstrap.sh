@@ -81,7 +81,19 @@ check_tools() {
 # ── repos ────────────────────────────────────────────────────────────────────
 clone_or_update() {
   local dir="$1" name="$2"; local path="$ROOT/$dir"
+  # Some repos must be checked out on a specific branch rather than their GitHub
+  # default. server's default is the abandoned pre-split monorepo branch; the
+  # Rust crate lives on main — clone/track that so cargo works.
+  local want_branch=""; [ "$dir" = server ] && want_branch="main"
+
   if [ -d "$path/.git" ]; then
+    # snap to the required branch if we got the wrong one from an earlier clone
+    if [ -n "$want_branch" ] && [ "$(git -C "$path" branch --show-current)" != "$want_branch" ]; then
+      say "$dir: switch to $want_branch"
+      git -C "$path" fetch -q origin "$want_branch" 2>/dev/null || true
+      git -C "$path" checkout -q "$want_branch" 2>/dev/null \
+        || git -C "$path" checkout -q -B "$want_branch" "origin/$want_branch"
+    fi
     if [ "$PULL" = 1 ]; then
       if [ -z "$(git -C "$path" status --porcelain)" ]; then
         say "$dir: pull"
@@ -103,8 +115,8 @@ clone_or_update() {
       fi
       die "clone $name failed (gh auth / org access?)"
     fi
-    say "$dir: clone $ORG/$name"
-    git clone --quiet "$url" "$path" || die "clone $name failed"
+    say "$dir: clone $ORG/$name${want_branch:+ ($want_branch)}"
+    git clone ${want_branch:+--branch "$want_branch"} --quiet "$url" "$path" || die "clone $name failed"
   fi
 }
 
@@ -120,7 +132,7 @@ wire_submodule() {
 install_deps() {
   say "app: bun install"; ( cd "$ROOT/app" && bun install --silent )
   [ -d "$ROOT/hub" ]    && { say "hub: bun install";  ( cd "$ROOT/hub"    && bun install --silent ); }
-  [ -d "$ROOT/server" ] && { say "server: cargo fetch"; ( cd "$ROOT/server" && cargo fetch --quiet ); }
+  [ -d "$ROOT/server" ] && { say "server: cargo fetch"; ( cd "$ROOT/server" && cargo fetch --quiet ) || warn "server: cargo fetch failed (continuing)"; }
   # shared = types only (no build); plugins = lang-agnostic samples (no install)
   return 0
 }
