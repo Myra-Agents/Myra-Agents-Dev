@@ -31,6 +31,10 @@ This file governs only the bootstrap scripts.
 
 ## Working on the scripts
 
+- **`install.sh`** — the `curl | bash` entrypoint. Clones this repo to `MYRA_DIR`
+  (default `~/Myra-Agents-Dev`), then runs `bootstrap.sh`. Asks via `/dev/tty`
+  (probed with `: >/dev/tty` so it degrades to defaults when piped/CI — never
+  block). Passes flags through to bootstrap (`bash -s -- --sidecar`).
 - **`bootstrap.sh`** — idempotent. Toolchain check → `gh auth setup-git` (https
   token; SSH keys may lack org access) → `git clone` each member → re-point the
   `packages/shared` submodule URL to the org → install deps. Flags: `--no-pull`,

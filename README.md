@@ -1,9 +1,26 @@
 # Myra Agents — dev workspace
 
 Multi-repo dev setup for the [Myra-Agents](https://github.com/orgs/Myra-Agents/repositories) org.
-Two scripts, idempotent, clone everything from the org and wire it together.
+Idempotent scripts that clone everything from the org and wire it together.
+
+## One-line install (no manual clone)
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/Myra-Agents/Myra-Agents-Dev/develop/install.sh | bash
+```
+
+Clones this repo for you, then runs bootstrap. Asks a couple of questions on your
+terminal (with safe defaults when piped). Override:
+
+```bash
+curl -fsSL .../install.sh | MYRA_DIR=~/code/myra bash -s -- --sidecar
+```
+
+## Or clone + run manually
+
+```bash
+git clone https://github.com/Myra-Agents/Myra-Agents-Dev.git
+cd Myra-Agents-Dev
 ./bootstrap.sh          # clone/update all repos, wire submodules, install deps
 ./bootstrap.sh --check  # toolchain check only
 ./bootstrap.sh --sidecar# also fetch the prebuilt server binary for the app
