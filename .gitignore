@@ -5,6 +5,9 @@
 /server/
 /plugins/
 
+# generated per-machine by bootstrap.sh (lists only the repos you cloned)
+/myra.code-workspace
+
 # junk
 .DS_Store
 *.bun-build

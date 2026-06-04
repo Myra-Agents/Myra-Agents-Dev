@@ -10,6 +10,16 @@ Two scripts, idempotent, clone everything from the org and wire it together.
 ./dev.sh help           # run targets
 ```
 
+`bootstrap.sh` also generates a multi-root **`myra.code-workspace`** (only the
+repos you actually cloned). Open it with:
+
+```bash
+./dev.sh code           # auto-detects Cursor / VS Code
+./dev.sh code code      # force VS Code when both are installed (or: export MYRA_EDITOR=code)
+```
+
+The file is per-machine (gitignored).
+
 ## Repos
 
 | dir        | repo                  | what                                   | vis     |

@@ -23,6 +23,8 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   server        Rust sidecar  (cargo run, 127.0.0.1:4319)
   sidecar       download/build the prebuilt server binary for the app
   shared-pull   update the shared submodule in app + hub to latest main
+  code [cursor|code]  open the multi-root workspace; auto-detects Cursor/VS Code,
+                pick when both exist (or set MYRA_EDITOR)
 
   check         run all verification gates (tsc + cargo check + biome + server build)
   status        git status across every repo
@@ -40,6 +42,30 @@ case "${1:-help}" in
   hub-deploy) runin hub  bun run deploy ;;
   server)     runin server cargo run ;;
   sidecar)    runin app  bun run sidecar:build ;;
+
+  code)
+    ws="$ROOT/myra.code-workspace"
+    [ -f "$ws" ] || { echo "✗ $ws missing — run ./bootstrap.sh first" >&2; exit 1; }
+    want="${2:-${MYRA_EDITOR:-}}"            # explicit arg or MYRA_EDITOR env
+    have_cursor=0; have_code=0
+    command -v cursor >/dev/null 2>&1 && have_cursor=1
+    command -v code   >/dev/null 2>&1 && have_code=1
+    case "$want" in
+      cursor)      bin=cursor ;;
+      code|vscode) bin=code ;;
+      "")
+        if [ "$have_cursor" = 1 ] && [ "$have_code" = 1 ]; then
+          echo "${c_dim}Cursor and VS Code both found — defaulting to Cursor.${c_rst}"
+          echo "${c_dim}  pick: ./dev.sh code code   (or: export MYRA_EDITOR=code)${c_rst}"
+          bin=cursor
+        elif [ "$have_cursor" = 1 ]; then bin=cursor
+        elif [ "$have_code" = 1 ];   then bin=code
+        else bin="" ; fi ;;
+      *) echo "unknown editor '$want' (use: cursor | code)" >&2; exit 2 ;;
+    esac
+    [ -n "$bin" ] || { echo "open manually (no cursor/code CLI on PATH): $ws"; exit 1; }
+    command -v "$bin" >/dev/null 2>&1 || { echo "✗ '$bin' CLI not on PATH" >&2; exit 1; }
+    echo "${c_grn}▶${c_rst} opening in $bin…"; "$bin" "$ws" ;;
 
   shared-pull)
     for r in app hub; do
