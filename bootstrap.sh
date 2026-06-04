@@ -130,6 +130,47 @@ build_sidecar() {
   ( cd "$ROOT/app" && bun run sidecar:build ) || warn "sidecar build failed (release asset missing for pinned version?)"
 }
 
+# Generate a multi-root VS Code / Cursor workspace listing only the repos that
+# are actually present (so an OSS contributor without hub/server gets a valid file).
+gen_code_workspace() {
+  local ws="$ROOT/myra.code-workspace"
+  local folders="" first=1
+  add() {
+    [ -d "$ROOT/$1" ] || return 0
+    [ "$first" = 1 ] && first=0 || folders="$folders,"
+    folders="$folders
+    { \"name\": \"$2\", \"path\": \"$1\" }"
+  }
+  add app     "app · desktop (Next+Tauri)"
+  add shared  "shared · @myra/shared"
+  add hub     "hub · CF Worker"
+  add server  "server · Rust sidecar"
+  add plugins "plugins"
+  add .       "· workspace (scripts)"
+  # rust-analyzer projects — only the present Rust crates
+  local ra=""
+  [ -d "$ROOT/server" ] && ra="\"server/Cargo.toml\""
+  [ -d "$ROOT/app" ]    && ra="${ra:+$ra, }\"app/src-tauri/Cargo.toml\""
+  cat > "$ws" <<JSON
+{
+  "folders": [${folders}
+  ],
+  "settings": {
+    "files.exclude": { "**/node_modules": true, "**/target": true, "**/.next": true, "**/out": true },
+    "search.exclude": { "**/node_modules": true, "**/target": true, "**/.next": true, "**/out": true, "**/bun.lock": true },
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "biomejs.biome",
+    "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" },
+    "rust-analyzer.linkedProjects": [${ra}]
+  },
+  "extensions": {
+    "recommendations": ["biomejs.biome", "rust-lang.rust-analyzer", "tauri-apps.tauri-vscode"]
+  }
+}
+JSON
+  say "wrote $(basename "$ws") ($(grep -c '"path"' "$ws") folders)"
+}
+
 # ── run ──────────────────────────────────────────────────────────────────────
 check_tools
 [ "$CHECK_ONLY" = 1 ] && { say "check-only: done"; exit 0; }
@@ -138,6 +179,7 @@ for entry in "${REPOS[@]}"; do clone_or_update "${entry%%:*}" "${entry##*:}"; do
 for dir in "${SUBMODULE_REPOS[@]}"; do wire_submodule "$dir"; done
 install_deps
 [ "$DO_SIDECAR" = 1 ] && build_sidecar
+gen_code_workspace
 
 present() { [ -d "$ROOT/$1" ] && printf "${c_grn}✓${c_rst}" || printf "${c_yel}○${c_rst}"; }
 cat <<EOF
@@ -160,7 +202,8 @@ EOF
 fi
 cat <<EOF
 
-Next:  ./dev.sh sidecar    # fetch prebuilt server binary (first run)
+Next:  ./dev.sh code       # open the multi-root workspace in VS Code / Cursor
+       ./dev.sh sidecar    # fetch prebuilt server binary (first run)
        ./dev.sh app        # run the desktop app
        ./dev.sh help       # all run targets
 EOF
