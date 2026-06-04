@@ -76,3 +76,9 @@ GitFlow-lite, **org-wide** across all Myra-Agents repos:
 - Hotfix: branch off `main`, PR into `main`, then merge `main` back to `develop`.
 
 Open PRs against `develop`. Conventional Commit subjects. One logical change per PR.
+
+> **Server exception:** `Myra-Agents-Server`'s `develop` is an abandoned
+> pre-split *monorepo* branch (`4a801e8`, old app/Clerk/UI commits), not the Rust
+> server lineage on `main` — so its default branch currently shows pre-split
+> content. Left as-is intentionally; don't realign or change its default without
+> asking. Stale content is backed up at `~/Backups/Myra-Agents-monorepo.git`.
