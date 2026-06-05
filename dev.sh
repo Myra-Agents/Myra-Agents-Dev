@@ -23,6 +23,8 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   server        Rust sidecar  (cargo run, 127.0.0.1:4319)
   sidecar       download/build the prebuilt server binary for the app
   shared-pull   update the shared submodule in app + hub to latest main
+  plugins-link [args]  symlink this repo's plugins into ~/.myra-agents/plugins
+                (passes args to plugins/link-plugins.sh: --demo --copy --unlink)
   code [cursor|code]  open the multi-root workspace; auto-detects Cursor/VS Code,
                 pick when both exist (or set MYRA_EDITOR)
 
@@ -42,6 +44,10 @@ case "${1:-help}" in
   hub-deploy) runin hub  bun run deploy ;;
   server)     runin server cargo run ;;
   sidecar)    runin app  bun run sidecar:build ;;
+
+  plugins-link)
+    [ -x "$ROOT/plugins/link-plugins.sh" ] || { echo "✗ plugins/ not present — run ./bootstrap.sh first" >&2; exit 1; }
+    "$ROOT/plugins/link-plugins.sh" "${@:2}" ;;
 
   code)
     ws="$ROOT/myra.code-workspace"
