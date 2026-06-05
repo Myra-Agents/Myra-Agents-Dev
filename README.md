@@ -3,6 +3,9 @@
 Multi-repo dev setup for the [Myra-Agents](https://github.com/orgs/Myra-Agents/repositories) org.
 Idempotent scripts that clone everything from the org and wire it together.
 
+> **Myra** is Swedish for *ant* — a single agent is one ant, the org is the colony:
+> many small workers running in parallel, coordinating toward a shared goal.
+
 ## One-line install (no manual clone)
 
 ```bash
