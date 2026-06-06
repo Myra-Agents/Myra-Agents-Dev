@@ -38,6 +38,8 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   shared-pull   update the shared submodule in app + hub to latest main
   plugins-link [args]  symlink this repo's plugins into ~/.myra-agents/plugins
                 (passes args to plugins/link-plugins.sh: --demo --copy --unlink)
+  runner [setup|run|service|status|remove|--check]  self-hosted x64 CI runner
+                (provisions this Mac as the myra-x64 GitHub Actions runner)
   code [cursor|code]  open the multi-root workspace; auto-detects Cursor/VS Code,
                 pick when both exist (or set MYRA_EDITOR)
 
@@ -120,6 +122,12 @@ case "${1:-help}" in
   plugins-link)
     [ -x "$ROOT/plugins/link-plugins.sh" ] || { echo "✗ plugins/ not present — run ./bootstrap.sh first" >&2; exit 1; }
     "$ROOT/plugins/link-plugins.sh" "${@:2}" ;;
+
+  # Self-hosted CI runner manager. Passthrough — runner.sh owns the TTY (run is a
+  # foreground daemon; setup/config are interactive), so it stays plain (no TUI).
+  runner)
+    [ -x "$ROOT/runner.sh" ] || { echo "✗ runner.sh missing — run ./bootstrap.sh first" >&2; exit 1; }
+    "$ROOT/runner.sh" "${@:2}" ;;
 
   code)
     ws="$ROOT/myra.code-workspace"

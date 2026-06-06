@@ -85,6 +85,27 @@ run them without those repos cloned.
 | `status`     | git status across every repo                            |
 | `pull`       | ff-pull every repo (skips dirty ones)                   |
 
+## Self-hosted CI runner (`./runner.sh`)
+
+GitHub retired its Intel macOS *hosted* runners, so the org's release workflows
+can no longer build the `x86_64-apple-darwin` artifacts on github.com. `runner.sh`
+turns this Apple Silicon Mac into a self-hosted runner labelled **`myra-x64`** —
+it cross-compiles x86_64 — and the app's `release.yml` + server's
+`release-server.yml` route their x86_64 macOS jobs to it (`runs-on: myra-x64`).
+
+```bash
+./runner.sh --check                 # probe prerequisites (gh scope, cargo, bun, arch)
+./runner.sh setup                   # org-level (one runner serves every repo; needs admin:org)
+./runner.sh setup --repo Myra-Agents-Server   # single repo (needs only `repo` scope)
+./runner.sh service install         # run it as a background launchd service
+./runner.sh status                  # config + service state
+./runner.sh remove                  # deregister from GitHub
+```
+
+> Runner files live in gitignored `./.actions-runner/`. **Don't** add a
+> `pull_request` trigger to a `myra-x64` job on a public repo — a fork could run
+> code on this Mac. The release workflows fire only on tag push / dispatch.
+
 ## Prereqs
 
 bun, Rust (cargo), Node 20+, gh (authenticated), git. `wrangler` optional — hub uses `bunx wrangler`.
