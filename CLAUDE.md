@@ -8,13 +8,14 @@ workspace.
 
 ```
 Myra-Agents-Dev/        ← this repo (clone = workspace root)
-  bootstrap.sh  dev.sh  README.md
+  bootstrap.sh  dev.sh  install.sh  README.md
+  tui/                  ← Bubble Tea progress UI for bootstrap (Go, tracked)
   app/  shared/  hub/  server/  plugins/   ← cloned by bootstrap, gitignored
 ```
 
 The member repos are **gitignored** (`.gitignore` lists `/app/`, `/shared/`, …)
-— each is its own clone, never committed here. Only the 3 scripts + README +
-this file are tracked.
+— each is its own clone, never committed here. Only the 3 scripts + the `tui/`
+Go module + README + this file are tracked (the compiled `tui/.bin/` is ignored).
 
 ## The members (and where their docs live)
 
@@ -38,9 +39,18 @@ This file governs only the bootstrap scripts.
 - **`bootstrap.sh`** — idempotent. Toolchain check → `gh auth setup-git` (https
   token; SSH keys may lack org access) → `git clone` each member → re-point the
   `packages/shared` submodule URL to the org → install deps. Flags: `--no-pull`,
-  `--sidecar`, `--check`.
+  `--sidecar`, `--check`, `--no-tui`.
+- **`tui/`** — a small Go **Bubble Tea** renderer (`tui/main.go`) for bootstrap's
+  progress. bootstrap does all the real work and emits sentinel-prefixed *events*
+  (`tui/ui.sh` helpers `step_begin`/`step_end`/`ui_group`/…); those are piped into
+  `tui/myra-tui`, which renders a live checklist on `/dev/tty` while raw git/bun
+  output becomes a dim log tail. See the TUI gotchas below.
 - **`dev.sh`** — thin wrappers over each member's own scripts. Targets:
   `app app-demo web hub hub-deploy server sidecar shared-pull check status pull`.
+  The finite, step-shaped targets (`status`/`pull`/`check`/`sidecar`/`shared-pull`)
+  render through the same Bubble Tea UI via `ui_run`; a global `--no-tui` (stripped
+  before dispatch) forces plain. The exec targets (`app`/`web`/`hub`/`server`/…)
+  replace the process and own the TTY, so they stay plain — don't TUI-wrap them.
 
 ### Conventions / gotchas (these bit during authoring)
 
@@ -58,6 +68,14 @@ This file governs only the bootstrap scripts.
   repo being inaccessible.
 - **No Gamma-Software refs.** The org moved off the old `Gamma-Software` account;
   everything points at `Myra-Agents/`. Don't reintroduce the old namespace.
+- **The TUI is best-effort, never required.** bootstrap renders with Bubble Tea
+  *by default* but must degrade to the plain colored output with `--no-tui`, when
+  no Go toolchain is on PATH, or when there's no terminal (`curl | bash` with no
+  `/dev/tty`, CI). The `tui_bin`/`have_tty` probes in bootstrap.sh guard this —
+  keep it: a failed/absent TUI must never abort setup. Events arrive on the
+  renderer's **stdin** (the pipe) while display + keys use **/dev/tty**, so it
+  works even when the script's own stdout is a pipe. Rebuilds the binary on demand
+  into the gitignored `tui/.bin/`.
 - Editing a `.github/workflows/*` file needs a gh token with the `workflow` scope
   (`gh auth refresh -s workflow --hostname github.com`) — the `--hostname` flag is
   required in non-interactive shells.
@@ -65,8 +83,10 @@ This file governs only the bootstrap scripts.
 ## Verify a script change
 
 ```bash
-bash -n bootstrap.sh && bash -n dev.sh      # syntax
-./bootstrap.sh --check                       # toolchain probe, no clone
+bash -n bootstrap.sh && bash -n dev.sh && bash -n tui/ui.sh   # shell syntax
+(cd tui && go vet ./... && go test ./...)                      # TUI renderer
+./bootstrap.sh --check                                         # toolchain probe, no clone
+./bootstrap.sh --check --no-tui                                # force the plain fallback
 ```
 
 ## Branching

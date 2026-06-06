@@ -11,6 +11,10 @@
 #   MYRA_DIR=~/code/myra   target workspace dir   (default: ~/Myra-Agents-Dev)
 #   MYRA_REF=main          branch/tag to clone    (default: repo default)
 #   curl ... | bash -s -- --sidecar --no-pull     flags passed through to bootstrap.sh
+#   curl ... | bash -s -- --no-tui                plain output (skip the Bubble Tea UI)
+#
+# bootstrap renders its progress with a Bubble Tea TUI by default; it degrades to
+# plain output automatically with --no-tui, no Go toolchain, or no /dev/tty.
 #
 set -euo pipefail
 

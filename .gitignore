@@ -8,6 +8,9 @@
 # generated per-machine by bootstrap.sh (lists only the repos you cloned)
 /myra.code-workspace
 
+# compiled Bubble Tea progress UI (tui/ source IS tracked; the binary is not)
+/tui/.bin/
+
 # junk
 .DS_Store
 *.bun-build
