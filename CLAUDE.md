@@ -51,6 +51,16 @@ This file governs only the bootstrap scripts.
   render through the same Bubble Tea UI via `ui_run`; a global `--no-tui` (stripped
   before dispatch) forces plain. The exec targets (`app`/`web`/`hub`/`server`/…)
   replace the process and own the TTY, so they stay plain — don't TUI-wrap them.
+- **`runner.sh`** — provisions this Mac as a **self-hosted GitHub Actions runner**
+  labelled `myra-x64`. GitHub retired its Intel macOS *hosted* runners, so the
+  `x86_64-apple-darwin` jobs in the app's `release.yml` and the server's
+  `release-server.yml` now `runs-on: myra-x64` — an Apple Silicon Mac that
+  cross-compiles x86_64 (proven: `cargo build --target x86_64-apple-darwin`).
+  Subcommands: `setup [--org|--repo NAME]`, `run`, `service`, `status`, `remove`,
+  `--check`. Org-level registration needs a gh token with `admin:org`; one repo
+  needs only `repo`. Runner lives in gitignored `./.actions-runner/`. **Don't add
+  a `pull_request` trigger to a `myra-x64` job on a public repo** — a fork could
+  run code on the Mac; the release workflows fire only on tag push / dispatch.
 
 ### Conventions / gotchas (these bit during authoring)
 

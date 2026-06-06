@@ -11,6 +11,9 @@
 # compiled Bubble Tea progress UI (tui/ source IS tracked; the binary is not)
 /tui/.bin/
 
+# self-hosted GitHub Actions runner provisioned by runner.sh (downloaded + per-machine)
+/.actions-runner/
+
 # junk
 .DS_Store
 *.bun-build
