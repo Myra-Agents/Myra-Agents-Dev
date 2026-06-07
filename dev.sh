@@ -28,6 +28,8 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
 
   app           desktop app (Tauri shell + Next dev, port 1420)
   app-demo      same, DEMO=1 (isolated demo data)
+  build [debug|release]  bundle the Tauri app (default release; debug = unoptimized,
+                faster compile). Output → app/src-tauri/target/{debug,release}/
   web           frontend only, browser backend  (bun run dev)
   hub           local hub (Cloudflare Worker via bun --watch)
   hub-deploy    wrangler deploy the hub
@@ -109,6 +111,45 @@ do_check() {
 case "${1:-help}" in
   app)        runin app  bun run tauri:dev ;;
   app-demo)   runin app  bun run tauri:demo ;;
+  build)
+    # Bundle the app. Long cargo compile, plain output (no TUI) like app/web.
+    # Can't exec here — we want to offer to launch the result afterwards.
+    [ -d "$ROOT/app" ] || { echo "✗ app/ not present — run ./bootstrap.sh first" >&2; exit 1; }
+    mode="${2:-release}"
+    case "$mode" in
+      release) ( cd "$ROOT/app" && bun run tauri build ) ;;
+      debug)   ( cd "$ROOT/app" && bun run tauri build --debug ) ;;
+      *) echo "unknown build mode '$mode' (use: debug | release)" >&2; exit 2 ;;
+    esac
+    # Find the launchable artifact + how to open it, per OS. tauri build emits
+    # macOS .app / Windows .exe / Linux AppImage under target/<mode>/...
+    base="$ROOT/app/src-tauri/target/$mode"
+    artifact=""; opener=""
+    case "$(uname -s)" in
+      Darwin)
+        artifact=$(ls -dt "$base"/bundle/macos/*.app 2>/dev/null | head -1); opener="open" ;;
+      MINGW*|MSYS*|CYGWIN*)            # Windows under Git Bash / MSYS
+        artifact=$(ls -dt "$base"/*.exe 2>/dev/null | head -1); opener="winstart" ;;
+      *)                               # Linux (best-effort)
+        artifact=$(ls -dt "$base"/bundle/appimage/*.AppImage 2>/dev/null | head -1)
+        opener="xdg-open" ;;
+    esac
+    # Offer to launch it — prompt only on a real terminal so this degrades to a
+    # no-op when piped / in CI (same /dev/tty probe as install.sh).
+    if [ -n "$artifact" ]; then
+      echo "${c_grn}▶${c_rst} built: ${artifact}"
+      if : >/dev/tty 2>/dev/null; then
+        printf "%s" "${c_dim}run it now? [y/N] ${c_rst}" >/dev/tty
+        read -r ans </dev/tty || ans=""
+        case "$ans" in
+          [yY]*)
+            case "$opener" in
+              winstart) cmd //c start "" "$artifact" ;;   # detached on Windows
+              *)        "$opener" "$artifact" ;;
+            esac ;;
+        esac
+      fi
+    fi ;;
   web)        runin app  bun run dev ;;
   hub)        runin hub  bun run dev ;;
   hub-deploy) runin hub  bun run deploy ;;
