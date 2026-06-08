@@ -253,10 +253,17 @@ func truncate(s string, w int) string {
 	if w <= 1 || len(s) <= w {
 		return s
 	}
-	if w < 2 {
-		return s[:w]
-	}
 	return s[:w-1] + "…"
+}
+
+// initialModel builds the freshly-configured model used at startup, with the
+// green Dot spinner and the default ring-buffer/width settings. Shared with the
+// tests so they exercise the exact production defaults.
+func initialModel() model {
+	sp := spinner.New()
+	sp.Spinner = spinner.Dot
+	sp.Style = cGreen
+	return model{sp: sp, maxLogs: 6, width: 80}
 }
 
 func main() {
@@ -270,12 +277,7 @@ func main() {
 	}
 	defer tty.Close()
 
-	sp := spinner.New()
-	sp.Spinner = spinner.Dot
-	sp.Style = cGreen
-
-	m := model{sp: sp, maxLogs: 6, width: 80}
-	p := tea.NewProgram(m, tea.WithInput(tty), tea.WithOutput(tty))
+	p := tea.NewProgram(initialModel(), tea.WithInput(tty), tea.WithOutput(tty))
 
 	go readStream(p)
 
