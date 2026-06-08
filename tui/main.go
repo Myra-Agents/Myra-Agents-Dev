@@ -23,9 +23,14 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/common-nighthawk/go-figure"
 )
 
 const sentinel = "\x1fMYRA\x1f"
+
+// bannerMinWidth is the narrowest terminal that still gets the ASCII art; below
+// it we fall back to a plain bold wordmark so nothing wraps into garbage.
+const bannerMinWidth = 72
 
 // ── styles ─────────────────────────────────────────────────────────────────
 var (
@@ -34,7 +39,26 @@ var (
 	cRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
 	cDim    = lipgloss.NewStyle().Faint(true)
 	cBold   = lipgloss.NewStyle().Bold(true)
+	cBrand  = lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true) // Charm-pink wordmark
+	cSub    = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	boxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("240")).
+			Padding(0, 2)
 )
+
+// banner renders the "Myra Agents" wordmark — ASCII art when the terminal is
+// wide enough, a plain bold fallback otherwise.
+func banner(width int) string {
+	if width > 0 && width < bannerMinWidth {
+		return cBrand.Render("Myra Agents")
+	}
+	rows := figure.NewFigure("Myra Agents", "small", true).Slicify()
+	for len(rows) > 0 && strings.TrimSpace(rows[len(rows)-1]) == "" {
+		rows = rows[:len(rows)-1]
+	}
+	return cBrand.Render(strings.Join(rows, "\n"))
+}
 
 var ansiRE = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
@@ -218,28 +242,37 @@ func (m model) icon(s stepState) string {
 
 func (m model) View() string {
 	var b strings.Builder
+	b.WriteString(banner(m.width) + "\n")
 	if m.title != "" {
-		b.WriteString(cGreen.Render(cBold.Render(m.title)) + "\n\n")
+		b.WriteString(cSub.Render(m.title) + "\n")
 	}
+	b.WriteString("\n")
+
+	// The checklist (and the dim log tail under an active run) live inside a
+	// rounded box; built separately so an empty tree skips the border entirely.
+	var body strings.Builder
 	for _, g := range m.groups {
 		if g.title != "" {
-			b.WriteString(cBold.Render(g.title) + "\n")
+			body.WriteString(cBold.Render(g.title) + "\n")
 		}
 		for _, s := range g.steps {
-			line := fmt.Sprintf("  %s %s", m.icon(s.state), s.title)
+			line := fmt.Sprintf("%s %s", m.icon(s.state), s.title)
 			if s.note != "" {
 				line += " " + cDim.Render(s.note)
 			}
-			b.WriteString(line + "\n")
+			body.WriteString(line + "\n")
 		}
 	}
-	// scrolling raw-log tail under an active run
 	if !m.done && len(m.logs) > 0 {
-		b.WriteString("\n")
+		body.WriteString("\n")
 		for _, l := range m.logs {
-			b.WriteString(cDim.Render("  "+truncate(l, m.width-4)) + "\n")
+			body.WriteString(cDim.Render(truncate(l, m.width-8)) + "\n")
 		}
 	}
+	if bs := strings.TrimRight(body.String(), "\n"); bs != "" {
+		b.WriteString(boxStyle.Render(bs) + "\n")
+	}
+
 	if m.fatal != "" {
 		b.WriteString("\n" + cRed.Render("✗ "+m.fatal) + "\n")
 	}
@@ -267,9 +300,23 @@ func initialModel() model {
 }
 
 func main() {
-	// The display + key input go to the real terminal even though events arrive
-	// on the piped stdin. If we can't open it, plain mode is the caller's job —
-	// exit non-zero so a `|| fallback` in bash can react, but harmlessly.
+	// Subcommands drive the huh-backed interactive prompts (see prompts.go).
+	// With no subcommand we are the event renderer fed on stdin — the original
+	// behaviour ui_run relies on, so the pipe contract is unchanged.
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "confirm", "input", "select":
+			os.Exit(runPrompt(os.Args[1], os.Args[2:]))
+		}
+	}
+	renderer()
+}
+
+// renderer runs the live progress view. The display + key input go to the real
+// terminal even though events arrive on the piped stdin. If we can't open it,
+// plain mode is the caller's job — exit non-zero so a `|| fallback` in bash can
+// react, but harmlessly.
+func renderer() {
 	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "myra-tui: no /dev/tty:", err)

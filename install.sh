@@ -60,16 +60,40 @@ else
 fi
 cd "$DIR"
 
+# The workspace now exists, so wire up the shared Bubble Tea UI and build its
+# binary early — the remaining prompts render through huh, degrading to plain
+# /dev/tty reads when there's no Go toolchain, no terminal, or --no-tui was piped.
+NOTUI=0
+for a in "$@"; do [ "$a" = "--no-tui" ] && NOTUI=1; done
+if [ -f tui/ui.sh ]; then
+  # shellcheck source=tui/ui.sh
+  . tui/ui.sh
+  ui_init "$DIR" "$NOTUI"
+fi
+
+# confirm <question> <default:y|n> — huh when the UI is up, plain ask() otherwise.
+confirm() {
+  local q="$1"
+  local def="$2"
+  if type ui_confirm >/dev/null 2>&1; then
+    ui_confirm "$q" "$def"
+  elif [ "$def" = y ]; then
+    yes "$(ask "$q (Y/n)" "y")"
+  else
+    yes "$(ask "$q (y/N)" "n")"
+  fi
+}
+
 # 3. choices
 side=""
-if yes "$(ask "Fetch the prebuilt server binary now? (y/N)" "N")"; then side="--sidecar"; fi
+if confirm "Fetch the prebuilt server binary now?" n; then side="--sidecar"; fi
 
 # 4. run the real bootstrap (passes --sidecar + any flags you piped through)
 say "running bootstrap…"
 ./bootstrap.sh $side "$@"
 
 # 5. optional editor open
-if yes "$(ask "Open the workspace in VS Code / Cursor now? (y/N)" "N")"; then
+if confirm "Open the workspace in VS Code / Cursor now?" n; then
   ./dev.sh code || warn "couldn't open editor (no cursor/code CLI?)"
 fi
 

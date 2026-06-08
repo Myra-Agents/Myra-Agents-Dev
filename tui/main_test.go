@@ -110,3 +110,50 @@ func TestTruncate(t *testing.T) {
 		t.Errorf("truncate short = %q", got)
 	}
 }
+
+func TestBannerWideIsAsciiArt(t *testing.T) {
+	out := banner(100)
+	if !strings.Contains(out, "\n") {
+		t.Fatalf("wide banner should be multi-line ASCII art, got:\n%s", out)
+	}
+	// ASCII art spells the wordmark out in glyphs, so the literal string is absent.
+	if strings.Contains(out, "Myra Agents") {
+		t.Fatalf("wide banner unexpectedly contains the literal wordmark")
+	}
+}
+
+func TestBannerNarrowFallsBackToPlain(t *testing.T) {
+	out := banner(40) // below bannerMinWidth
+	if !strings.Contains(out, "Myra Agents") {
+		t.Fatalf("narrow banner should be the plain wordmark, got %q", out)
+	}
+	if strings.Contains(out, "\n") {
+		t.Fatalf("narrow banner should be single-line, got %q", out)
+	}
+}
+
+func TestViewRendersBannerSubtitleAndBox(t *testing.T) {
+	m := newModel()
+	m.title = "bootstrap"
+	m.feed(sentinel + "group\tg\tToolchain")
+	m.feed(sentinel + "step\ts1\tbun")
+	m.feed(sentinel + "state\ts1\tok")
+	out := m.View()
+	if !strings.Contains(out, "bootstrap") {
+		t.Fatalf("subtitle missing:\n%s", out)
+	}
+	if !strings.Contains(out, "╭") || !strings.Contains(out, "╰") {
+		t.Fatalf("rounded box border missing:\n%s", out)
+	}
+	if !strings.Contains(out, "Toolchain") || !strings.Contains(out, "bun") {
+		t.Fatalf("checklist content missing:\n%s", out)
+	}
+}
+
+func TestViewWithoutStepsSkipsBox(t *testing.T) {
+	m := newModel() // no groups/steps yet
+	out := m.View()
+	if strings.Contains(out, "╭") {
+		t.Fatalf("empty tree should not draw a box:\n%s", out)
+	}
+}
