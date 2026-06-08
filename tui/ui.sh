@@ -116,3 +116,84 @@ ui_run() {
   fi
   "$1"
 }
+
+# ── interactive prompts (huh in TUI, plain /dev/tty fallback) ─────────────────
+# These work even when the script's own stdin is a pipe (curl | bash): the Go
+# binary draws its form on /dev/tty, and the plain fallback reads /dev/tty too.
+# The renderer returns exit 2 when it can't open /dev/tty — we treat that as
+# "fall back to plain" rather than a user answer, so a stale TUI never traps us.
+
+# ui_confirm <question> [default:yes|no] — returns 0 for yes, 1 for no.
+ui_confirm() {
+  local q="$1"
+  local def="${2:-no}"
+  local rc
+  if [ "$TUI" = 1 ] && [ -n "$TUI_BIN" ]; then
+    "$TUI_BIN" confirm "$q" --default "$def"; rc=$?
+    [ "$rc" != 2 ] && return "$rc"
+  fi
+  local hint ans
+  case "$def" in [yY]|[yY][eE][sS]) hint="Y/n" ;; *) hint="y/N" ;; esac
+  if { : >/dev/tty; } 2>/dev/null; then
+    printf "%s ${c_dim}[%s]${c_rst} " "$q" "$hint" > /dev/tty
+    read -r ans < /dev/tty || ans=""
+  else
+    ans=""
+  fi
+  [ -z "$ans" ] && ans="$def"
+  case "$ans" in [yY]|[yY][eE][sS]) return 0 ;; *) return 1 ;; esac
+}
+
+# ui_input <question> [default] — echoes the chosen value to stdout.
+ui_input() {
+  local q="$1"
+  local def="${2:-}"
+  local out rc
+  if [ "$TUI" = 1 ] && [ -n "$TUI_BIN" ]; then
+    out="$("$TUI_BIN" input "$q" --default "$def")"; rc=$?
+    if [ "$rc" = 0 ]; then echo "$out"; return 0; fi
+    if [ "$rc" != 2 ]; then echo "$def"; return 0; fi   # 1 = aborted → default
+  fi
+  local ans
+  if { : >/dev/tty; } 2>/dev/null; then
+    printf "%s ${c_dim}[%s]${c_rst} " "$q" "$def" > /dev/tty
+    read -r ans < /dev/tty || ans=""
+  else
+    ans=""
+  fi
+  echo "${ans:-$def}"
+}
+
+# ui_select <title> <option...> — echoes the chosen option to stdout (first on
+# abort/empty). Falls back to a numbered /dev/tty menu without the renderer.
+ui_select() {
+  local title="$1"; shift
+  local rc out
+  if [ "$TUI" = 1 ] && [ -n "$TUI_BIN" ]; then
+    out="$("$TUI_BIN" select "$title" "$@")"; rc=$?
+    if [ "$rc" = 0 ]; then echo "$out"; return 0; fi
+    if [ "$rc" != 2 ]; then echo "$1"; return 0; fi     # 1 = aborted → first
+  fi
+  local opt i n ans
+  if { : >/dev/tty; } 2>/dev/null; then
+    i=1
+    for opt in "$@"; do
+      printf "  %s) %s\n" "$i" "$opt" > /dev/tty
+      i=$((i + 1))
+    done
+    printf "%s " "$title" > /dev/tty
+    read -r ans < /dev/tty || ans=""
+    case "$ans" in
+      ''|*[!0-9]*) echo "$1" ;;
+      *)
+        n=1
+        for opt in "$@"; do
+          [ "$n" = "$ans" ] && { echo "$opt"; return 0; }
+          n=$((n + 1))
+        done
+        echo "$1" ;;
+    esac
+  else
+    echo "$1"
+  fi
+}

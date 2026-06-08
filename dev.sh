@@ -108,6 +108,19 @@ do_check() {
   fi
 }
 
+# No target given: on a real terminal, offer an interactive picker (huh when the
+# renderer is up, a numbered /dev/tty menu otherwise). Piped / CI / --no-tui keeps
+# the plain help listing — never auto-pick a target without a human present.
+if [ "$#" -eq 0 ]; then
+  if [ "$NO_TUI" != 1 ] && have_tty; then
+    sel="$(ui_select "Pick a target — ./dev.sh <target>" \
+      app app-demo web hub server sidecar build check status pull shared-pull code help)"
+    if [ -n "$sel" ]; then set -- "$sel"; else usage; exit 0; fi
+  else
+    usage; exit 0
+  fi
+fi
+
 case "${1:-help}" in
   app)        runin app  bun run tauri:dev ;;
   app-demo)   runin app  bun run tauri:demo ;;
