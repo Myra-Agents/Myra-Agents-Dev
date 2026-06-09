@@ -30,6 +30,20 @@ Go module + README + this file are tracked (the compiled `tui/.bin/` is ignored)
 Each member has its own `CLAUDE.md` — read that when working **inside** a member.
 This file governs only the bootstrap scripts.
 
+## Org GitHub Project (the planning board)
+
+There is an org-level GitHub Project — **"Myra Agents"** (project #1, private):
+<https://github.com/orgs/Myra-Agents/projects/1>. It's the cross-repo planning
+board (Status / Team / Iteration / Quarter / Milestone fields; PRs + issues from
+all member repos land here). **Refer to it whenever you need to know what's
+planned, in flight, or how work is tracked across the org** — e.g. before
+proposing new work, when triaging, or to find the board status of a PR/issue.
+
+Accessing it needs a gh token with the `project` scope
+(`gh auth refresh -s project --hostname github.com`). Query it via
+`gh project view 1 --owner Myra-Agents` and
+`gh project item-list 1 --owner Myra-Agents`.
+
 ## Working on the scripts
 
 - **`install.sh`** — the `curl | bash` entrypoint. Clones this repo to `MYRA_DIR`
