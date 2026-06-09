@@ -6,7 +6,7 @@
 # workflows can no longer build the `x86_64-apple-darwin` artifacts on
 # github.com. This provisions an Apple Silicon Mac as a self-hosted runner
 # labelled `myra-x64`: it builds arm64 natively AND cross-compiles x86_64,
-# replacing the dead Intel runner for both the server (`release-server.yml`) and
+# replacing the dead Intel runner for both the Worker (`release-server.yml`) and
 # the app (`release.yml`). The matching jobs use `runs-on: myra-x64`.
 #
 # One runner registered at the ORG level serves every repo. Registering at the
@@ -107,7 +107,7 @@ check() {
       *" admin:org "*) printf "  ${c_grn}✓${c_rst} gh token has admin:org (org registration)\n" ;;
       *) printf "  ${c_yel}○${c_rst} gh token lacks admin:org (needed for org-level setup)\n"
          printf "       grant it:  ${c_dim}gh auth refresh -s admin:org --hostname github.com${c_rst}\n"
-         printf "       or use a single repo:  ${c_dim}./runner.sh setup --repo Myra-Agents-Server${c_rst}\n" ;;
+         printf "       or use a single repo:  ${c_dim}./runner.sh setup --repo Worker${c_rst}\n" ;;
     esac
   fi
 

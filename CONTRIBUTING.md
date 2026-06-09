@@ -14,13 +14,13 @@ for the full branch strategy.
 ## Setup
 
 ```bash
-git clone https://github.com/Myra-Agents/Myra-Agents-Dev.git
-cd Myra-Agents-Dev && ./bootstrap.sh
+git clone https://github.com/Myra-Agents/Myrastack.git
+cd Myrastack && ./bootstrap.sh
 ```
 
 Outside contributors without access to the private `hub`/`server` repos still get
 a working **app + shared + plugins** setup — `bootstrap.sh` skips what it can't
-reach, and the app runs against the public prebuilt server binary
+reach, and the app runs against the public prebuilt worker binary
 (`./dev.sh sidecar`).
 
 ## Verify before opening a PR
