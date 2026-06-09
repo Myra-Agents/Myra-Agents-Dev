@@ -7,7 +7,7 @@ together. Cloning this repo and running `./bootstrap.sh` produces a full dev
 workspace.
 
 ```
-Myra-Agents-Dev/        ← this repo (clone = workspace root)
+Myrastack/              ← this repo (clone = workspace root)
   bootstrap.sh  dev.sh  install.sh  README.md
   tui/                  ← Bubble Tea progress UI for bootstrap (Go, tracked)
   app/  shared/  hub/  server/  plugins/   ← cloned by bootstrap, gitignored
@@ -19,13 +19,13 @@ Go module + README + this file are tracked (the compiled `tui/.bin/` is ignored)
 
 ## The members (and where their docs live)
 
-| dir        | repo                | what                              | vis     |
-|------------|---------------------|-----------------------------------|---------|
-| `app/`     | Myra-Agents         | desktop app (Next.js 16 + Tauri)  | public  |
-| `shared/`  | Myra-Agents-Shared  | `@myra/shared` types/contracts    | public  |
-| `hub/`     | Myra-Agents-Hub     | Cloudflare Worker SaaS relay      | private |
-| `server/`  | Myra-Agents-Server  | Rust sidecar binary               | private |
-| `plugins/` | Myra-Agents-Plugins | runtime plugins                   | public  |
+| dir        | repo       | what                              | vis     |
+|------------|------------|-----------------------------------|---------|
+| `app/`     | Myra-Agents | desktop app (Next.js 16 + Tauri) | public  |
+| `shared/`  | Pheromones | `@myra/shared` types/contracts    | public  |
+| `hub/`     | Nest       | Cloudflare Worker SaaS relay      | private |
+| `server/`  | Worker     | Rust worker binary                | private |
+| `plugins/` | Plugins    | runtime plugins                   | public  |
 
 Each member has its own `CLAUDE.md` — read that when working **inside** a member.
 This file governs only the bootstrap scripts.
@@ -33,7 +33,7 @@ This file governs only the bootstrap scripts.
 ## Working on the scripts
 
 - **`install.sh`** — the `curl | bash` entrypoint. Clones this repo to `MYRA_DIR`
-  (default `~/Myra-Agents-Dev`), then runs `bootstrap.sh`. Asks via `/dev/tty`
+  (default `~/Myrastack`), then runs `bootstrap.sh`. Asks via `/dev/tty`
   (probed with `: >/dev/tty` so it degrades to defaults when piped/CI — never
   block). Passes flags through to bootstrap (`bash -s -- --sidecar`).
 - **`bootstrap.sh`** — idempotent. Toolchain check → `gh auth setup-git` (https
@@ -46,14 +46,14 @@ This file governs only the bootstrap scripts.
   `tui/myra-tui`, which renders a live checklist on `/dev/tty` while raw git/bun
   output becomes a dim log tail. See the TUI gotchas below.
 - **`dev.sh`** — thin wrappers over each member's own scripts. Targets:
-  `app app-demo web hub hub-deploy server sidecar shared-pull check status pull`.
+  `app app-demo web hub hub-deploy worker sidecar shared-pull check status pull`.
   The finite, step-shaped targets (`status`/`pull`/`check`/`sidecar`/`shared-pull`)
   render through the same Bubble Tea UI via `ui_run`; a global `--no-tui` (stripped
-  before dispatch) forces plain. The exec targets (`app`/`web`/`hub`/`server`/…)
+  before dispatch) forces plain. The exec targets (`app`/`web`/`hub`/`worker`/…)
   replace the process and own the TTY, so they stay plain — don't TUI-wrap them.
 - **`runner.sh`** — provisions this Mac as a **self-hosted GitHub Actions runner**
   labelled `myra-x64`. GitHub retired its Intel macOS *hosted* runners, so the
-  `x86_64-apple-darwin` jobs in the app's `release.yml` and the server's
+  `x86_64-apple-darwin` jobs in the app's `release.yml` and the Worker's
   `release-server.yml` now `runs-on: myra-x64` — an Apple Silicon Mac that
   cross-compiles x86_64 (proven: `cargo build --target x86_64-apple-darwin`).
   Subcommands: `setup [--org|--repo NAME]`, `run`, `service`, `status`, `remove`,
@@ -72,9 +72,9 @@ This file governs only the bootstrap scripts.
   and fail on private org repos even with `git_protocol=https`. Use plain
   `git clone https://github.com/Myra-Agents/<repo>.git` + the gh credential helper.
 - **Private repos are optional, not fatal.** `bootstrap.sh` probes access and
-  **skips** `hub`/`server` when the account can't see them, so an open-source
+  **skips** `hub`/`worker` when the account can't see them, so an open-source
   contributor still gets a working app+shared+plugins setup that runs against the
-  **public prebuilt server binary**. Keep this property — never `die` on a private
+  **public prebuilt worker binary**. Keep this property — never `die` on a private
   repo being inaccessible.
 - **No Gamma-Software refs.** The org moved off the old `Gamma-Software` account;
   everything points at `Myra-Agents/`. Don't reintroduce the old namespace.
@@ -106,13 +106,13 @@ GitFlow-lite, **org-wide** across all Myra-Agents repos:
 - `main` — stable, released code; **tagged releases only**, never commit straight to it.
 - `develop` — **default branch**; all day-to-day work integrates here.
 - `feature/<slug>` · `fix/<slug>` · `chore/<slug>` — short-lived, branch off `develop`, PR back into `develop`.
-- Release: merge `develop` → `main` + tag (`vX.Y.Z`; server uses `server-vX.Y.Z`).
+- Release: merge `develop` → `main` + tag (`vX.Y.Z`; Worker uses `worker-vX.Y.Z`).
 - Hotfix: branch off `main`, PR into `main`, then merge `main` back to `develop`.
 
 Open PRs against `develop`. Conventional Commit subjects. One logical change per PR.
 
-> **Server exception:** `Myra-Agents-Server`'s `develop` is an abandoned
+> **Worker exception:** `Worker`'s `develop` is an abandoned
 > pre-split *monorepo* branch (`4a801e8`, old app/Clerk/UI commits), not the Rust
-> server lineage on `main` — so its default branch currently shows pre-split
+> worker lineage on `main` — so its default branch currently shows pre-split
 > content. Left as-is intentionally; don't realign or change its default without
 > asking. Stale content is backed up at `~/Backups/Myra-Agents-monorepo.git`.

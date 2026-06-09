@@ -8,7 +8,7 @@
 # Usage:
 #   ./bootstrap.sh              # full setup
 #   ./bootstrap.sh --no-pull    # don't pull existing clones, just (re)wire + install
-#   ./bootstrap.sh --sidecar    # also download/build the prebuilt server sidecar for the app
+#   ./bootstrap.sh --sidecar    # also download/build the prebuilt worker sidecar for the app
 #   ./bootstrap.sh --check      # toolchain check only, no clone/install
 #   ./bootstrap.sh --no-tui     # plain line-by-line output (no Bubble Tea UI)
 #
@@ -20,19 +20,19 @@ set -euo pipefail
 
 ORG="Myra-Agents"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SHARED_URL="https://github.com/${ORG}/Myra-Agents-Shared.git"
+SHARED_URL="https://github.com/${ORG}/Pheromones.git"
 
 # repo dir -> org repo name
 REPOS=(
   "app:Myra-Agents"
-  "shared:Myra-Agents-Shared"
-  "hub:Myra-Agents-Hub"
-  "server:Myra-Agents-Server"
-  "plugins:Myra-Agents-Plugins"
+  "shared:Pheromones"
+  "hub:Nest"
+  "server:Worker"
+  "plugins:Plugins"
 )
 # private repos — skipped (not fatal) when the gh account lacks access.
 # An outside / open-source contributor gets a working app+shared+plugins setup;
-# the app runs against the PUBLIC prebuilt server binary, so server/hub source
+# the app runs against the PUBLIC prebuilt worker binary, so worker/hub source
 # is not needed to build or run it.
 PRIVATE_REPOS=" hub server "
 # repos that carry a packages/shared submodule
@@ -108,7 +108,7 @@ clone_or_update() {
   local name="$2"
   local path="$ROOT/$dir"
   # Some repos must be checked out on a specific branch rather than their GitHub
-  # default. server's default is the abandoned pre-split monorepo branch; the
+  # default. Worker's default is the abandoned pre-split monorepo branch; the
   # Rust crate lives on main — clone/track that so cargo works.
   local want_branch=""; [ "$dir" = server ] && want_branch="main"
 
@@ -170,7 +170,7 @@ install_deps() {
     ( cd "$ROOT/hub" && bun install --silent ) && step_end ok || step_end warn "failed (continuing)"
   fi
   if [ -d "$ROOT/server" ]; then
-    step_begin "server: cargo fetch"
+    step_begin "worker: cargo fetch"
     ( cd "$ROOT/server" && cargo fetch --quiet ) && step_end ok || step_end warn "cargo fetch failed (continuing)"
   fi
   # shared = types only (no build); plugins = lang-agnostic samples (no install)
@@ -178,7 +178,7 @@ install_deps() {
 }
 
 build_sidecar() {
-  step_begin "server sidecar"
+  step_begin "worker sidecar"
   ( cd "$ROOT/app" && bun run sidecar:build ) && step_end ok "downloaded/built" \
     || step_end warn "sidecar build failed (release asset missing for pinned version?)"
 }
@@ -198,7 +198,7 @@ gen_code_workspace() {
   add app     "app · desktop (Next+Tauri)"
   add shared  "shared · @myra/shared"
   add hub     "hub · CF Worker"
-  add server  "server · Rust sidecar"
+  add server  "worker · Rust worker"
   add plugins "plugins"
   add .       "· workspace (scripts)"
   # rust-analyzer projects — only the present Rust crates
@@ -260,24 +260,24 @@ cat <<EOF
 
 ${c_grn}✓ Workspace ready${c_rst} at $ROOT
 
-  $(present app)     app/      desktop app (Next.js + Tauri)   ${c_dim}public${c_rst}
-  $(present shared)  shared/   @myra/shared types              ${c_dim}public · submodule of app+hub${c_rst}
-  $(present hub)     hub/      Cloudflare Worker SaaS          ${c_dim}private${c_rst}
-  $(present server)  server/   Rust sidecar binary             ${c_dim}private${c_rst}
-  $(present plugins) plugins/  runtime plugins                 ${c_dim}public${c_rst}
+  $(present app)     app/      Myra-Agents — desktop app (Next.js + Tauri)   ${c_dim}public${c_rst}
+  $(present shared)  shared/   Pheromones — @myra/shared types           ${c_dim}public · submodule of app+hub${c_rst}
+  $(present hub)     hub/      Nest — Cloudflare Worker SaaS             ${c_dim}private${c_rst}
+  $(present server)  server/   Worker — Rust sidecar binary              ${c_dim}private${c_rst}
+  $(present plugins) plugins/  Plugins — runtime plugins                 ${c_dim}public${c_rst}
 EOF
 if [ -n "$SKIPPED" ]; then
   cat <<EOF
 
 ${c_yel}Skipped private repo(s):${c_rst}$SKIPPED ${c_dim}(no access — fine for app/shared/plugins work).${c_rst}
 The app runs fully without them: ${c_dim}./dev.sh sidecar${c_rst} fetches the PUBLIC prebuilt
-server binary, then ${c_dim}./dev.sh app${c_rst}.
+worker binary, then ${c_dim}./dev.sh app${c_rst}.
 EOF
 fi
 cat <<EOF
 
 Next:  ./dev.sh code       # open the multi-root workspace in VS Code / Cursor
-       ./dev.sh sidecar    # fetch prebuilt server binary (first run)
+       ./dev.sh sidecar    # fetch prebuilt worker binary (first run)
        ./dev.sh app        # run the desktop app
        ./dev.sh help       # all run targets
 EOF

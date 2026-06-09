@@ -2,13 +2,13 @@
 #
 # Myra Agents — one-line installer.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Myra-Agents/Myra-Agents-Dev/develop/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Myra-Agents/Myrastack/develop/install.sh | bash
 #
 # Clones the dev-workspace repo for you (no manual clone), then runs bootstrap.
 # Interactive where it helps (asks via your terminal), with safe non-interactive
 # defaults when piped without a TTY. Override with env / flags:
 #
-#   MYRA_DIR=~/code/myra   target workspace dir   (default: ~/Myra-Agents-Dev)
+#   MYRA_DIR=~/code/myra   target workspace dir   (default: ~/Myrastack)
 #   MYRA_REF=main          branch/tag to clone    (default: repo default)
 #   curl ... | bash -s -- --sidecar --no-pull     flags passed through to bootstrap.sh
 #   curl ... | bash -s -- --no-tui                plain output (skip the Bubble Tea UI)
@@ -18,8 +18,8 @@
 #
 set -euo pipefail
 
-REPO="Myra-Agents/Myra-Agents-Dev"
-DIR="${MYRA_DIR:-$HOME/Myra-Agents-Dev}"
+REPO="Myra-Agents/Myrastack"
+DIR="${MYRA_DIR:-$HOME/Myrastack}"
 REF="${MYRA_REF:-}"
 
 c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_red=$'\033[31m'; c_dim=$'\033[2m'; c_rst=$'\033[0m'
@@ -86,7 +86,7 @@ confirm() {
 
 # 3. choices
 side=""
-if confirm "Fetch the prebuilt server binary now?" n; then side="--sidecar"; fi
+if confirm "Fetch the prebuilt worker binary now?" n; then side="--sidecar"; fi
 
 # 4. run the real bootstrap (passes --sidecar + any flags you piped through)
 say "running bootstrap…"
@@ -104,7 +104,7 @@ ${c_grn}✓ Done.${c_rst} Workspace at ${c_dim}$DIR${c_rst}
 
 Next steps:
   cd $DIR
-  ./dev.sh sidecar     # fetch the prebuilt server binary (if you skipped it)
+  ./dev.sh sidecar     # fetch the prebuilt worker binary (if you skipped it)
   ./dev.sh app         # run the desktop app
   ./dev.sh code        # open in VS Code / Cursor
   ./dev.sh help        # all targets

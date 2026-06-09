@@ -1,15 +1,15 @@
-# Myra Agents — dev workspace
+# Myrastack
 
 Multi-repo dev setup for the [Myra-Agents](https://github.com/orgs/Myra-Agents/repositories) org.
 Idempotent scripts that clone everything from the org and wire it together.
 
 > **Myra** is Swedish for *ant* — a single agent is one ant, the org is the colony:
-> many small workers running in parallel, coordinating toward a shared goal.
+> many workers running in parallel, coordinating toward a shared goal.
 
 ## One-line install (no manual clone)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Myra-Agents/Myra-Agents-Dev/develop/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Myra-Agents/Myrastack/develop/install.sh | bash
 ```
 
 Clones this repo for you, then runs bootstrap. Asks a couple of questions on your
@@ -22,11 +22,11 @@ curl -fsSL .../install.sh | MYRA_DIR=~/code/myra bash -s -- --sidecar
 ## Or clone + run manually
 
 ```bash
-git clone https://github.com/Myra-Agents/Myra-Agents-Dev.git
-cd Myra-Agents-Dev
+git clone https://github.com/Myra-Agents/Myrastack.git
+cd Myrastack
 ./bootstrap.sh          # clone/update all repos, wire submodules, install deps
 ./bootstrap.sh --check  # toolchain check only
-./bootstrap.sh --sidecar# also fetch the prebuilt server binary for the app
+./bootstrap.sh --sidecar# also fetch the prebuilt worker binary for the app
 ./dev.sh help           # run targets
 ```
 
@@ -42,17 +42,17 @@ The file is per-machine (gitignored).
 
 ## Repos
 
-| dir        | repo                  | what                                   | vis     |
-|------------|-----------------------|----------------------------------------|---------|
-| `app/`     | Myra-Agents           | desktop app (Next.js 16 + Tauri v2)    | public  |
-| `shared/`  | Myra-Agents-Shared    | `@myra/shared` TS types/contracts      | public  |
-| `hub/`     | Myra-Agents-Hub       | Cloudflare Worker SaaS relay (Clerk)   | private |
-| `server/`  | Myra-Agents-Server    | Rust sidecar binary (agent runner)     | private |
-| `plugins/` | Myra-Agents-Plugins   | runtime plugins (lang-agnostic)        | public  |
+| dir        | repo        | what                                   | vis     |
+|------------|-------------|----------------------------------------|---------|
+| `app/`     | Myra-Agents | desktop app (Next.js 16 + Tauri v2)    | public  |
+| `shared/`  | Pheromones  | `@myra/shared` TS types/contracts      | public  |
+| `hub/`     | Nest        | Cloudflare Worker SaaS relay (Clerk)   | private |
+| `server/`  | Worker      | Rust worker binary (agent runner)      | private |
+| `plugins/` | Plugins     | runtime plugins (lang-agnostic)        | public  |
 
 `shared/` is also pulled in as the `packages/shared` git submodule of **app** and **hub**
 (bootstrap re-points the submodule URL from the old `Gamma-Software` namespace to the org).
-The Rust **server** is consumed by the app as a *prebuilt binary* (`./dev.sh sidecar`), not built from source here.
+The Rust **worker** is consumed by the app as a *prebuilt binary* (`./dev.sh sidecar`), not built from source here.
 
 ## Open-source contributors (no private access)
 
@@ -61,12 +61,12 @@ them — it does not fail. You still get a fully working **app + shared + plugin
 
 ```bash
 ./bootstrap.sh     # clones app/shared/plugins, skips hub/server with a notice
-./dev.sh sidecar   # fetches the PUBLIC prebuilt server binary
+./dev.sh sidecar   # fetches the PUBLIC prebuilt worker binary
 ./dev.sh app       # runs the desktop app — no private source needed
 ```
 
-The app never contains server/hub source; it talks to the prebuilt sidecar binary published
-on the public app repo's Releases. `hub`/`server` dev targets print a clear message if you
+The app never contains worker/hub source; it talks to the prebuilt sidecar binary published
+on the public app repo's Releases. `hub`/`worker` dev targets print a clear message if you
 run them without those repos cloned.
 
 ## Run targets (`./dev.sh <target>`)
@@ -78,10 +78,10 @@ run them without those repos cloned.
 | `web`        | frontend only, browser stand-in backend                |
 | `hub`        | local hub (Cloudflare Worker, `bun --watch`)            |
 | `hub-deploy` | `wrangler deploy` the hub                               |
-| `server`     | Rust sidecar — `cargo run`, 127.0.0.1:4319              |
-| `sidecar`    | download/build the prebuilt server binary for the app  |
+| `worker`     | Rust worker — `cargo run`, 127.0.0.1:4319               |
+| `sidecar`    | download/build the prebuilt worker binary for the app  |
 | `shared-pull`| bump the shared submodule in app+hub to latest `main`   |
-| `check`      | all gates: tsc + biome + cargo check (app & server)     |
+| `check`      | all gates: tsc + biome + cargo check (app & worker)     |
 | `status`     | git status across every repo                            |
 | `pull`       | ff-pull every repo (skips dirty ones)                   |
 
@@ -90,13 +90,13 @@ run them without those repos cloned.
 GitHub retired its Intel macOS *hosted* runners, so the org's release workflows
 can no longer build the `x86_64-apple-darwin` artifacts on github.com. `runner.sh`
 turns this Apple Silicon Mac into a self-hosted runner labelled **`myra-x64`** —
-it cross-compiles x86_64 — and the app's `release.yml` + server's
+it cross-compiles x86_64 — and the app's `release.yml` + Worker's
 `release-server.yml` route their x86_64 macOS jobs to it (`runs-on: myra-x64`).
 
 ```bash
 ./runner.sh --check                 # probe prerequisites (gh scope, cargo, bun, arch)
 ./runner.sh setup                   # org-level (one runner serves every repo; needs admin:org)
-./runner.sh setup --repo Myra-Agents-Server   # single repo (needs only `repo` scope)
+./runner.sh setup --repo Worker   # single repo (needs only `repo` scope)
 ./runner.sh service install         # run it as a background launchd service
 ./runner.sh status                  # config + service state
 ./runner.sh remove                  # deregister from GitHub

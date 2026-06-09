@@ -33,8 +33,8 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   web           frontend only, browser backend  (bun run dev)
   hub           local hub (Cloudflare Worker via bun --watch)
   hub-deploy    wrangler deploy the hub
-  server        Rust sidecar  (cargo run, 127.0.0.1:4319)
-  sidecar       download/build the prebuilt server binary for the app
+  worker        Rust worker  (cargo run, 127.0.0.1:4319)
+  sidecar       download/build the prebuilt worker binary for the app
   sign [build|ci|release]  macOS code signing helper (app/scripts/macos-sign.sh)
                 build = local signed build · ci = push secrets · release = tag
   shared-pull   update the shared submodule in app + hub to latest main
@@ -45,7 +45,7 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   code [cursor|code]  open the multi-root workspace; auto-detects Cursor/VS Code,
                 pick when both exist (or set MYRA_EDITOR)
 
-  check         run all verification gates (tsc + cargo check + biome + server build)
+  check         run all verification gates (tsc + cargo check + biome + worker build)
   status        git status across every repo
   pull          ff-pull every repo (skips dirty ones)
 
@@ -78,7 +78,7 @@ do_pull() {
 }
 
 do_sidecar() {
-  ui_group sidecar "server sidecar"
+  ui_group sidecar "worker sidecar"
   [ -d "$ROOT/app" ] || { step_begin "sidecar"; step_end fail "app/ not present — run ./bootstrap.sh"; return 1; }
   step_begin "download/build"
   ( cd "$ROOT/app" && bun run sidecar:build ) && step_end ok || { step_end fail; return 1; }
@@ -103,7 +103,7 @@ do_check() {
   step_begin "app: cargo check"
   ( cd "$ROOT/app/src-tauri" && cargo check ) && step_end ok || { step_end fail; return 1; }
   if [ -d "$ROOT/server" ]; then
-    step_begin "server: cargo check"
+    step_begin "worker: cargo check"
     ( cd "$ROOT/server" && cargo check ) && step_end ok || { step_end fail; return 1; }
   fi
 }
@@ -114,7 +114,7 @@ do_check() {
 if [ "$#" -eq 0 ]; then
   if [ "$NO_TUI" != 1 ] && have_tty; then
     sel="$(ui_select "Pick a target — ./dev.sh <target>" \
-      app app-demo web hub server sidecar build check status pull shared-pull code help)"
+      app app-demo web hub worker sidecar build check status pull shared-pull code help)"
     if [ -n "$sel" ]; then set -- "$sel"; else usage; exit 0; fi
   else
     usage; exit 0
@@ -166,7 +166,7 @@ case "${1:-help}" in
   web)        runin app  bun run dev ;;
   hub)        runin hub  bun run dev ;;
   hub-deploy) runin hub  bun run deploy ;;
-  server)     runin server cargo run ;;
+  worker)     runin server cargo run ;;
   sidecar)    ui_run do_sidecar || exit 1 ;;
 
   sign)
