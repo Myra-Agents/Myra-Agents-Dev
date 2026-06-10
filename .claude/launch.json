@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "app-dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd app && npx next dev"],
+      "port": 1420,
+      "autoPort": true
+    }
+  ]
+}
