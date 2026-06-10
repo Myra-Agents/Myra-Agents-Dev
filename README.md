@@ -112,11 +112,27 @@ Cloud sessions clone a **single** GitHub repo into a network-restricted sandbox,
 so the bootstrap workspace doesn't materialise on its own — the member repos are
 gitignored and only `bootstrap.sh` ships. To get a full workspace in the cloud,
 make the environment's **setup script** run bootstrap in remote mode (git auth
-comes from Anthropic's proxy, so `gh` isn't needed):
+comes from Anthropic's proxy, so `gh` isn't needed).
+
+Configure it in **Settings → Environments** at [claude.ai/code](https://claude.ai/code):
+
+- **Setup script** — paste the snippet below (runs once per environment, cached).
+- **Network access** — **Full**, or **Custom** with `bun.sh`, `sh.rustup.rs`,
+  `static.rust-lang.org` plus the default allowlist (GitHub, npm, crates.io).
+- **Environment variables** — leave empty. `CLAUDE_CODE_REMOTE=true` is inlined in
+  the script; never put secrets here (the box is shared/visible to the environment).
+- **GitHub** — connect via the Claude GitHub App. Private repos (`Nest`, `Worker`)
+  clone only if the connected account can see them; otherwise bootstrap **skips**
+  them and the app still runs against the public worker binary.
 
 ```bash
 #!/bin/bash
 set -e
+# The setup script runs from /tmp (cwd is NOT the repo root), so locate
+# bootstrap.sh and cd to it first — a bare `./bootstrap.sh` exits 127.
+BS="$(find /home/user "$HOME" /workspace -maxdepth 3 -name bootstrap.sh 2>/dev/null | head -1)"
+[ -n "$BS" ] || { echo "bootstrap.sh not found"; exit 1; }
+cd "$(dirname "$BS")"
 command -v bun   >/dev/null || curl -fsSL https://bun.sh/install | bash
 command -v cargo >/dev/null || curl -fsSL https://sh.rustup.rs | sh -s -- -y
 source "$HOME/.cargo/env" 2>/dev/null || true; export PATH="$HOME/.bun/bin:$PATH"
@@ -124,15 +140,14 @@ CLAUDE_CODE_REMOTE=true ./bootstrap.sh --no-tui   # clones members, installs dep
 ```
 
 `CLAUDE_CODE_REMOTE=true` makes `bootstrap.sh` treat `gh` as optional and skip the
-gh-token check (it would otherwise `die`). Set it in **Settings → Environments** at
-[claude.ai/code](https://claude.ai/code):
+gh-token check (it would otherwise `die`), relying on the proxy's git credentials.
 
-- **Setup script** — paste the snippet above (runs once per environment, cached).
-- **Network access** — **Full**, or **Custom** with `bun.sh`, `sh.rustup.rs`,
-  `static.rust-lang.org` plus the default allowlist (GitHub, npm, crates.io).
-- **GitHub** — connect via `/web-setup` or the Claude GitHub App. Private repos
-  (`Nest`, `Worker`) clone only if the connected account can see them; otherwise
-  bootstrap **skips** them and the app still runs against the public worker binary.
+**Observed sandbox layout:** the repo lands at `/home/user/Myrastack`, the setup
+script runs with `cwd=/home/user` and `$HOME=/root`, and bun + cargo are already on
+the base image (the `command -v` guards make the installs no-ops). The `find … | cd`
+dance is what makes the script independent of that cwd — keep it. If a future image
+moves the checkout, drop `pwd; ls -la; find / -name bootstrap.sh 2>/dev/null` at the
+top of the script to re-locate it.
 
 > Heads-up: the bootstrap workspace is a poor fit for cloud sessions (one clone
 > per session). For focused work, open a cloud session **directly on a member
