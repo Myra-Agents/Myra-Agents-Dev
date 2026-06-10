@@ -73,7 +73,12 @@ Accessing it needs a gh token with the `project` scope
 - **`bootstrap.sh`** — idempotent. Toolchain check → `gh auth setup-git` (https
   token; SSH keys may lack org access) → `git clone` each member → re-point the
   `packages/shared` submodule URL to the org → install deps. Flags: `--no-pull`,
-  `--sidecar`, `--check`, `--no-tui`.
+  `--sidecar`, `--check`, `--no-tui`. Honors `CLAUDE_CODE_REMOTE=true` (set by
+  Claude Code on the web): treats `gh` as optional and skips the gh-token check,
+  relying on the Anthropic proxy's git creds. **Cloud env setup** lives in the
+  README "Cloud sessions" section — note the setup script runs from `/tmp` with
+  `cwd=/home/user` (repo at `/home/user/Myrastack`, `$HOME=/root`), so it must
+  `find … | cd` to the repo root before calling `./bootstrap.sh` or it exits 127.
 - **`tui/`** — a small Go **Bubble Tea** renderer (`tui/main.go`) for bootstrap's
   progress. bootstrap does all the real work and emits sentinel-prefixed *events*
   (`tui/ui.sh` helpers `step_begin`/`step_end`/`ui_group`/…); those are piped into
