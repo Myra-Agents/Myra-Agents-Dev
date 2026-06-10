@@ -50,6 +50,11 @@ for a in "$@"; do
   esac
 done
 
+# Cloud sessions (Claude Code on the web) set CLAUDE_CODE_REMOTE=true. There git
+# auth is provided by Anthropic's proxy and `gh` may be absent — so we treat gh
+# as optional and skip the gh token checks, relying on ambient git credentials.
+REMOTE="${CLAUDE_CODE_REMOTE:-}"
+
 # shared progress helpers (step_begin/step_end/ui_group/…), colors, $TUI plumbing
 . "$ROOT/tui/ui.sh"
 
@@ -84,7 +89,12 @@ check_tools() {
   need bun   "https://bun.sh"            || ok=0
   need cargo "https://rustup.rs"         || ok=0
   need node  "https://nodejs.org (v20+)" || ok=0
-  need gh    "https://cli.github.com"    || ok=0
+  # In cloud sessions gh is optional (proxy handles git auth); elsewhere required.
+  if [ -n "$REMOTE" ] && ! command -v gh >/dev/null 2>&1; then
+    step_begin gh; step_end skip "optional in cloud — proxy handles git auth"
+  else
+    need gh    "https://cli.github.com"    || ok=0
+  fi
   need git   "xcode-select --install"    || ok=0
   # optional
   step_begin wrangler
@@ -95,6 +105,16 @@ check_tools() {
   fi
   [ "$ok" = 1 ] || die "Install the missing required tools above, then re-run."
   step_begin "gh auth"
+  # Cloud: never block on a gh token — git auth comes from Anthropic's proxy.
+  # Best-effort wire the https helper if gh happens to be present & authed.
+  if [ -n "$REMOTE" ]; then
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+      gh config set git_protocol https >/dev/null 2>&1 || true
+      gh auth setup-git >/dev/null 2>&1 || true
+    fi
+    step_end skip "cloud proxy handles git auth"
+    return 0
+  fi
   gh auth status >/dev/null 2>&1 || { step_end fail; die "gh not authenticated — run: gh auth login"; }
   # Private org repos clone over https via the gh token (SSH keys may lack org access).
   gh config set git_protocol https >/dev/null 2>&1 || true
