@@ -7,6 +7,12 @@
       "runtimeArgs": ["-c", "cd app && npx next dev"],
       "port": 1420,
       "autoPort": true
+    },
+    {
+      "name": "app-dev-1421",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd app && npx next dev -p 1421"],
+      "port": 1421
     }
   ]
 }
