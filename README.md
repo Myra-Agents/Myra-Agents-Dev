@@ -106,6 +106,38 @@ it cross-compiles x86_64 — and the app's `release.yml` + Worker's
 > `pull_request` trigger to a `myra-x64` job on a public repo — a fork could run
 > code on this Mac. The release workflows fire only on tag push / dispatch.
 
+## Cloud sessions (Claude Code on the web)
+
+Cloud sessions clone a **single** GitHub repo into a network-restricted sandbox,
+so the bootstrap workspace doesn't materialise on its own — the member repos are
+gitignored and only `bootstrap.sh` ships. To get a full workspace in the cloud,
+make the environment's **setup script** run bootstrap in remote mode (git auth
+comes from Anthropic's proxy, so `gh` isn't needed):
+
+```bash
+#!/bin/bash
+set -e
+command -v bun   >/dev/null || curl -fsSL https://bun.sh/install | bash
+command -v cargo >/dev/null || curl -fsSL https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env" 2>/dev/null || true; export PATH="$HOME/.bun/bin:$PATH"
+CLAUDE_CODE_REMOTE=true ./bootstrap.sh --no-tui   # clones members, installs deps
+```
+
+`CLAUDE_CODE_REMOTE=true` makes `bootstrap.sh` treat `gh` as optional and skip the
+gh-token check (it would otherwise `die`). Set it in **Settings → Environments** at
+[claude.ai/code](https://claude.ai/code):
+
+- **Setup script** — paste the snippet above (runs once per environment, cached).
+- **Network access** — **Full**, or **Custom** with `bun.sh`, `sh.rustup.rs`,
+  `static.rust-lang.org` plus the default allowlist (GitHub, npm, crates.io).
+- **GitHub** — connect via `/web-setup` or the Claude GitHub App. Private repos
+  (`Nest`, `Worker`) clone only if the connected account can see them; otherwise
+  bootstrap **skips** them and the app still runs against the public worker binary.
+
+> Heads-up: the bootstrap workspace is a poor fit for cloud sessions (one clone
+> per session). For focused work, open a cloud session **directly on a member
+> repo** (`Myra-Agents`, `Worker`, …) — each is self-contained.
+
 ## Prereqs
 
 bun, Rust (cargo), Node 20+, gh (authenticated), git. `wrangler` optional — hub uses `bunx wrangler`.
