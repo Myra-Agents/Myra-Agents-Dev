@@ -4,7 +4,7 @@
     {
       "name": "app-dev",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd app && npx next dev"],
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.22.1/bin:$PATH\"; cd app && npx next dev"],
       "port": 1420,
       "autoPort": true
     },
