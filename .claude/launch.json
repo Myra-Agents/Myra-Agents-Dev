@@ -13,6 +13,12 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "cd app && npx next dev -p 1421"],
       "port": 1421
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4178", "--directory", "Myra-Agents.github.io"],
+      "port": 4178
     }
   ]
 }
