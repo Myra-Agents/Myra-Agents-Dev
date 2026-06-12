@@ -5,6 +5,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 300,
+            "statusMessage": "Bootstrapping Myra workspace"
+          },
+          {
+            "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/index.sh --quiet 2>/dev/null || true",
             "async": true,
             "timeout": 120,
