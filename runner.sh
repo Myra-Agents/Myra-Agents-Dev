@@ -165,7 +165,21 @@ setup() {
 
   # launchd starts services with a minimal PATH; capture the interactive PATH so
   # the background service can still find cargo / bun / rustc when it builds.
-  printf '%s\n' "$PATH" > "$RUNNER_DIR/.path"
+  # Sanitize first: drop pyenv/rbenv `shims` dirs (their shadow `xattr` breaks
+  # Tauri's `xattr -cr` bundle step) and force the system bins ahead of the rest,
+  # while keeping cargo/bun/rustc dirs reachable.
+  local clean_path="" seg
+  local IFS=':'
+  for seg in $PATH; do
+    case "$seg" in
+      */shims|*/shims/) continue ;;          # pyenv/rbenv interpreter shims
+      /usr/bin|/bin|/usr/sbin|/sbin) continue ;;  # re-added up front below
+      "") continue ;;
+    esac
+    clean_path="${clean_path:+$clean_path:}$seg"
+  done
+  printf '%s\n' "/usr/bin:/bin:/usr/sbin:/sbin${clean_path:+:$clean_path}" \
+    > "$RUNNER_DIR/.path"
 
   say "request registration token (${api_base})"
   local token
