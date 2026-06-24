@@ -142,14 +142,14 @@ clone_or_update() {
         || git -C "$path" checkout -q -B "$want_branch" "origin/$want_branch"
     fi
     if [ "$PULL" = 1 ]; then
-      if [ -z "$(git -C "$path" status --porcelain)" ]; then
-        if git -C "$path" pull --ff-only --quiet; then
-          step_end ok "pulled"
-        else
-          step_end warn "ff pull failed (diverged?) — left as-is"
-        fi
+      # --autostash so a stale clone still fast-forwards when the only local
+      # changes are build artifacts (next-env.d.ts, src-tauri/Cargo.toml, a
+      # CRLF-rewritten .gitmodules, …). Without it a single dirty generated file
+      # froze the workspace at an old rev forever — the pull was silently skipped.
+      if git -C "$path" pull --ff-only --autostash --quiet; then
+        step_end ok "pulled"
       else
-        step_end warn "local changes — pull skipped"
+        step_end warn "ff pull failed (diverged / conflicting local edits) — left as-is"
       fi
     else
       step_end ok "present (skip pull)"
@@ -176,7 +176,13 @@ wire_submodule() {
   [ -d "$path/.git" ] || return 0
   step_begin "$dir"
   [ -f "$path/.gitmodules" ] || { step_end skip "no submodule"; return 0; }
-  git -C "$path" config -f .gitmodules submodule.packages/shared.url "$SHARED_URL"
+  # Only rewrite .gitmodules when the URL actually differs — an unconditional
+  # write dirties the tracked file every run (and CRLF-rewrites it on Windows),
+  # which then makes the next pull skip ("local changes"). sync/update below are
+  # working-tree-clean regardless, so they always run.
+  local cur_url
+  cur_url=$(git -C "$path" config -f .gitmodules --get submodule.packages/shared.url 2>/dev/null || true)
+  [ "$cur_url" = "$SHARED_URL" ] || git -C "$path" config -f .gitmodules submodule.packages/shared.url "$SHARED_URL"
   git -C "$path" submodule sync --quiet packages/shared
   git -C "$path" submodule update --init --quiet packages/shared || die "$dir: submodule init failed"
   step_end ok "packages/shared → $ORG"
