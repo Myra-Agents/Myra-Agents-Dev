@@ -1,4 +1,4 @@
-# Local QEMU VMs (Windows 11 + Ubuntu) via dockur — driven by `./dev.sh start-env`.
+# Local QEMU VMs (Windows 11 + Ubuntu) via dockur — driven by `./dev.sh env`.
 #
 # ⚠️  Apple Silicon Mac = NO /dev/kvm. Docker Desktop runs inside its own Linux
 #     VM with no nested hardware virtualization, so QEMU falls back to software
@@ -8,9 +8,9 @@
 # On a Linux x86 host WITH /dev/kvm (e.g. cergy-server), uncomment the `devices:`
 # blocks below to get KVM acceleration and it flies.
 #
-#   ./dev.sh start-env win        # or: ubuntu | all
-#   ./dev.sh env-status
-#   ./dev.sh stop-env win
+#   ./dev.sh env start win        # or: ubuntu | all
+#   ./dev.sh env status
+#   ./dev.sh env stop win
 
 name: local-vms
 

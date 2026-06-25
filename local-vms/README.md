@@ -1,17 +1,17 @@
 # local-vms — Windows 11 + Ubuntu via QEMU (Docker)
 
 Local throwaway VMs through [dockur](https://github.com/dockur/windows)
-(QEMU-in-Docker) with a clientless web viewer. Driven by `./dev.sh start-env`.
+(QEMU-in-Docker) with a clientless web viewer. Driven by `./dev.sh env`.
 
 ```bash
-./dev.sh start-env win        # Windows 11  → http://localhost:8006
-./dev.sh start-env ubuntu     # Ubuntu      → http://localhost:8007
-./dev.sh start-env all        # both
-./dev.sh env-status           # docker compose ps
-./dev.sh stop-env win         # stop when idle (VMs are heavy)
+./dev.sh env start win        # Windows 11  → http://localhost:8006
+./dev.sh env start ubuntu     # Ubuntu      → http://localhost:8007
+./dev.sh env start all        # both
+./dev.sh env status           # docker compose ps
+./dev.sh env stop win         # stop when idle (VMs are heavy)
 ```
 
-`start-env` creates `.env` from `.env.example` on first run (set `WIN_PASSWORD`).
+`env start` creates `.env` from `.env.example` on first run (set `WIN_PASSWORD`).
 
 | VM       | viewer                 | RDP/SSH              | creds                       |
 |----------|------------------------|----------------------|-----------------------------|
