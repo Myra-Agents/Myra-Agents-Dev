@@ -90,6 +90,10 @@ Accessing it needs a gh token with the `project` scope
   render through the same Bubble Tea UI via `ui_run`; a global `--no-tui` (stripped
   before dispatch) forces plain. The exec targets (`app`/`web`/`hub`/`worker`/…)
   replace the process and own the TTY, so they stay plain — don't TUI-wrap them.
+  `start-env`/`stop-env`/`env-status` drive `local-vms/docker-compose.yml` (dockur
+  Windows/Ubuntu QEMU VMs) — plain `docker compose` wrappers. **Mac caveat:** no
+  `/dev/kvm` on Apple Silicon → TCG emulation (slow; Windows ~unusable). The
+  cergy-server remote lab is the fast KVM-accelerated alternative.
 - **`runner.sh`** — provisions this Mac as a **self-hosted GitHub Actions runner**
   labelled `myra-x64`. GitHub retired its Intel macOS *hosted* runners, so the
   `x86_64-apple-darwin` jobs in the app's `release.yml` and the Worker's

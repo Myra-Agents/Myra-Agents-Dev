@@ -1,0 +1,63 @@
+# Local QEMU VMs (Windows 11 + Ubuntu) via dockur — driven by `./dev.sh start-env`.
+#
+# ⚠️  Apple Silicon Mac = NO /dev/kvm. Docker Desktop runs inside its own Linux
+#     VM with no nested hardware virtualization, so QEMU falls back to software
+#     emulation (TCG). Expect SLOW boots (Windows may be unusable). For fast
+#     native VMs on this Mac use Tart / UTM / Lima instead — see README.md.
+#
+# On a Linux x86 host WITH /dev/kvm (e.g. cergy-server), uncomment the `devices:`
+# blocks below to get KVM acceleration and it flies.
+#
+#   ./dev.sh start-env win        # or: ubuntu | all
+#   ./dev.sh env-status
+#   ./dev.sh stop-env win
+
+name: local-vms
+
+services:
+  # ---------- Windows 11 ----------
+  windows:
+    image: dockurr/windows
+    container_name: local-windows
+    environment:
+      VERSION: "11"
+      RAM_SIZE: "6G"
+      CPU_CORES: "4"
+      DISK_SIZE: "64G"
+      USERNAME: "admin"
+      PASSWORD: ${WIN_PASSWORD:-changeme}
+      # LANGUAGE: "French"
+      # KEYBOARD: "fr-FR"
+    ports:
+      - "8006:8006"          # web install viewer (noVNC)
+      - "3389:3389/tcp"      # RDP
+      - "3389:3389/udp"
+    volumes:
+      - ./storage/windows:/storage
+    cap_add: [NET_ADMIN]
+    devices:
+      - /dev/net/tun
+      # - /dev/kvm           # ← uncomment ONLY on a Linux host that has KVM
+    stop_grace_period: 2m
+    restart: unless-stopped
+
+  # ---------- Ubuntu ----------
+  ubuntu:
+    image: qemux/qemu
+    container_name: local-ubuntu
+    environment:
+      BOOT: "ubuntu"         # latest Ubuntu desktop; or e.g. "ubuntu-24.04"
+      RAM_SIZE: "4G"
+      CPU_CORES: "2"
+      DISK_SIZE: "32G"
+    ports:
+      - "8007:8006"          # web viewer
+      - "2222:22"            # SSH (enable openssh-server in guest)
+    volumes:
+      - ./storage/ubuntu:/storage
+    cap_add: [NET_ADMIN]
+    devices:
+      - /dev/net/tun
+      # - /dev/kvm           # ← uncomment ONLY on a Linux host that has KVM
+    stop_grace_period: 2m
+    restart: unless-stopped

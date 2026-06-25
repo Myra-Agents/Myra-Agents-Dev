@@ -45,6 +45,12 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   code [cursor|code]  open the multi-root workspace; auto-detects Cursor/VS Code,
                 pick when both exist (or set MYRA_EDITOR)
 
+  start-env <win|ubuntu|all>  boot a local QEMU VM (docker, local-vms/)
+                viewer: windows http://localhost:8006 · ubuntu http://localhost:8007
+                ${c_dim}⚠ Apple Silicon has no KVM → software emulation (slow)${c_rst}
+  stop-env <win|ubuntu|all>   stop a local VM (compose stop)
+  env-status    docker compose ps for the local VMs
+
   check         run all verification gates (tsc + cargo check + biome + worker build)
   status        git status across every repo
   pull          ff-pull every repo (skips dirty ones)
@@ -208,6 +214,32 @@ case "${1:-help}" in
     echo "${c_grn}▶${c_rst} opening in ${bin}..."; "$bin" "$ws" ;;
 
   shared-pull) ui_run do_shared_pull || exit 1 ;;
+
+  # Local QEMU VMs (Windows/Ubuntu) via docker compose in local-vms/. These exec
+  # docker directly (own output), so plain — no TUI wrap, like app/web.
+  start-env|stop-env|env-status)
+    compose="$ROOT/local-vms/docker-compose.yml"
+    [ -f "$compose" ] || { echo "✗ local-vms/docker-compose.yml missing" >&2; exit 1; }
+    command -v docker >/dev/null 2>&1 || { echo "✗ docker not on PATH — install Docker Desktop" >&2; exit 1; }
+    # friendly name → compose service ('' = all services)
+    svc=""
+    case "${2:-all}" in
+      win|windows) svc="windows" ;;
+      ubuntu|linux) svc="ubuntu" ;;
+      all|"") svc="" ;;
+      *) echo "unknown env '$2' (use: win | ubuntu | all)" >&2; exit 2 ;;
+    esac
+    case "$1" in
+      start-env)
+        ( cd "$ROOT/local-vms" && { [ -f .env ] || cp .env.example .env; } \
+          && docker compose up -d ${svc:+$svc} )
+        echo "${c_grn}▶${c_rst} viewer: windows ${c_dim}http://localhost:8006${c_rst} · ubuntu ${c_dim}http://localhost:8007${c_rst}"
+        [ "$(uname -s)" = Darwin ] && echo "${c_dim}⚠ Apple Silicon has no KVM → software emulation (slow). See local-vms/README.md${c_rst}" ;;
+      stop-env)
+        ( cd "$ROOT/local-vms" && docker compose stop ${svc:+$svc} ) ;;
+      env-status)
+        ( cd "$ROOT/local-vms" && docker compose ps ) ;;
+    esac ;;
 
   check)  ui_run do_check || exit 1 ;;
   status) ui_run do_status ;;
