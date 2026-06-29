@@ -50,6 +50,38 @@ grep -n "page.tsx" .claude/index/app.md               # route/file lookup
 The index is per-machine and refreshed on demand — if `--check` reports stale
 (member HEAD moved) or a file you just edited is missing, re-run `./index.sh`.
 
+## Debugging the running stack — where logs / runs / state live
+
+When a bug spans members, resolve it end-to-end yourself: reproduce → read the
+runtime artifacts → locate the code via the index → fix → verify. Don't ask the
+user to eyeball a console; the logs are on disk, read them directly. The data
+flows **UI (app, Tauri) → runner (server, Rust) → log files + live events**, so a
+single user-visible bug usually has evidence in more than one place — check both
+ends before concluding.
+
+**Each member documents its own debug map** — read the "Debugging" section of the
+member you're in:
+
+- **`app/CLAUDE.md` → Debugging** — Tauri log file
+  `~/Library/Logs/com.myra-agents.app/Myra Agents.log`, webview devtools console,
+  finding the dev instance (`pgrep -fl "target/debug/app"`).
+- **`server/CLAUDE.md` → Debugging** — the data dir `~/.myra-agents/`:
+  `agent-runs/{runId}.log` (per-run exec log, the #1 artifact), `agent-results/`,
+  `plan-sessions/`, board/schedules/settings state, `GET /events` live frames.
+- **`hub/CLAUDE.md` → Debugging** — local `bun run dev` stdout vs deployed Worker
+  `bunx wrangler tail --name myra-hub`; KV/DO state.
+
+This repo's own surfaces: **CI runner (`myra-x64`)** diagnostics in
+`./.actions-runner/_diag/Runner_*.log` / `Worker_*.log` (gitignored).
+**Bootstrap scripts** write no log file — the TUI renders to `/dev/tty`, raw
+git/bun output goes to stderr; re-run with `--no-tui` (or `./bootstrap.sh
+--check`) to see the plain stream.
+
+```bash
+tail -f "$(ls -t ~/.myra-agents/agent-runs/*.log | head -1)"   # latest agent run
+tail -f ~/Library/Logs/com.myra-agents.app/"Myra Agents.log"   # app + sidecar
+```
+
 ## Org GitHub Project (the planning board)
 
 There is an org-level GitHub Project — **"Myra Agents"** (project #1, private):
