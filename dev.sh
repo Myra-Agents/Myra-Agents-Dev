@@ -26,7 +26,9 @@ usage() {
   cat <<EOF
 ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
 
-  app           desktop app (Tauri shell + Next dev, port 1420)
+  app           desktop app (Tauri shell + Next dev, port 1420). Also testable
+                from a plain browser at localhost:1420 — the sidecar is pinned to
+                :4319 and the frontend points at it (set MYRA_SERVER_PORT to move).
   app-demo      same, DEMO=1 (isolated demo data)
   build [debug|release]  bundle the Tauri app (default release; debug = unoptimized,
                 faster compile). Output → app/src-tauri/target/{debug,release}/
@@ -45,11 +47,10 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   code [cursor|code]  open the multi-root workspace; auto-detects Cursor/VS Code,
                 pick when both exist (or set MYRA_EDITOR)
 
-  start-env <win|ubuntu|all>  boot a local QEMU VM (docker, local-vms/)
+  env <start|stop|status> [win|ubuntu|all]   local QEMU VMs (docker, local-vms/)
+                start boots, stop halts, status = compose ps (default: all)
                 viewer: windows http://localhost:8006 · ubuntu http://localhost:8007
                 ${c_dim}⚠ Apple Silicon has no KVM → software emulation (slow)${c_rst}
-  stop-env <win|ubuntu|all>   stop a local VM (compose stop)
-  env-status    docker compose ps for the local VMs
 
   check         run all verification gates (tsc + cargo check + biome + worker build)
   status        git status across every repo
@@ -128,8 +129,15 @@ if [ "$#" -eq 0 ]; then
 fi
 
 case "${1:-help}" in
-  app)        runin app  bun run tauri:dev ;;
-  app-demo)   runin app  bun run tauri:demo ;;
+  # The Tauri shell already spawns + supervises the myra-server sidecar; we just
+  # pin it to a known port (MYRA_DEV_PORT → the Rust ephemeral fallback) and bake
+  # NEXT_PUBLIC_MYRA_SERVER_URL at it, so the SAME backend is reachable from a
+  # plain browser at localhost:1420, not only the desktop window. Override the
+  # port with MYRA_SERVER_PORT.
+  app)        p="${MYRA_SERVER_PORT:-4319}"
+              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" bun run tauri:dev ;;
+  app-demo)   p="${MYRA_SERVER_PORT:-4319}"
+              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" bun run tauri:demo ;;
   build)
     # Bundle the app. Long cargo compile, plain output (no TUI) like app/web.
     # Can't exec here — we want to offer to launch the result afterwards.
@@ -217,28 +225,30 @@ case "${1:-help}" in
 
   # Local QEMU VMs (Windows/Ubuntu) via docker compose in local-vms/. These exec
   # docker directly (own output), so plain — no TUI wrap, like app/web.
-  start-env|stop-env|env-status)
+  env)
     compose="$ROOT/local-vms/docker-compose.yml"
     [ -f "$compose" ] || { echo "✗ local-vms/docker-compose.yml missing" >&2; exit 1; }
     command -v docker >/dev/null 2>&1 || { echo "✗ docker not on PATH — install Docker Desktop" >&2; exit 1; }
+    sub="${2:-status}"
     # friendly name → compose service ('' = all services)
     svc=""
-    case "${2:-all}" in
+    case "${3:-all}" in
       win|windows) svc="windows" ;;
       ubuntu|linux) svc="ubuntu" ;;
       all|"") svc="" ;;
-      *) echo "unknown env '$2' (use: win | ubuntu | all)" >&2; exit 2 ;;
+      *) echo "unknown env '$3' (use: win | ubuntu | all)" >&2; exit 2 ;;
     esac
-    case "$1" in
-      start-env)
+    case "$sub" in
+      start)
         ( cd "$ROOT/local-vms" && { [ -f .env ] || cp .env.example .env; } \
           && docker compose up -d ${svc:+$svc} )
         echo "${c_grn}▶${c_rst} viewer: windows ${c_dim}http://localhost:8006${c_rst} · ubuntu ${c_dim}http://localhost:8007${c_rst}"
         [ "$(uname -s)" = Darwin ] && echo "${c_dim}⚠ Apple Silicon has no KVM → software emulation (slow). See local-vms/README.md${c_rst}" ;;
-      stop-env)
+      stop)
         ( cd "$ROOT/local-vms" && docker compose stop ${svc:+$svc} ) ;;
-      env-status)
+      status|ps)
         ( cd "$ROOT/local-vms" && docker compose ps ) ;;
+      *) echo "unknown: ./dev.sh env <start|stop|status> [win|ubuntu|all]" >&2; exit 2 ;;
     esac ;;
 
   check)  ui_run do_check || exit 1 ;;

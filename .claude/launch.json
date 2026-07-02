@@ -11,8 +11,9 @@
     {
       "name": "app-dev-1421",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd app && npx next dev -p 1421"],
-      "port": 1421
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.22.1/bin:$PATH\"; cd app && npx next dev -p 1421"],
+      "port": 1421,
+      "autoPort": true
     },
     {
       "name": "landing",
