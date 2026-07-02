@@ -26,7 +26,9 @@ usage() {
   cat <<EOF
 ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
 
-  app           desktop app (Tauri shell + Next dev, port 1420)
+  app           desktop app (Tauri shell + Next dev, port 1420). Also testable
+                from a plain browser at localhost:1420 — the sidecar is pinned to
+                :4319 and the frontend points at it (set MYRA_SERVER_PORT to move).
   app-demo      same, DEMO=1 (isolated demo data)
   build [debug|release]  bundle the Tauri app (default release; debug = unoptimized,
                 faster compile). Output → app/src-tauri/target/{debug,release}/
@@ -127,8 +129,15 @@ if [ "$#" -eq 0 ]; then
 fi
 
 case "${1:-help}" in
-  app)        runin app  bun run tauri:dev ;;
-  app-demo)   runin app  bun run tauri:demo ;;
+  # The Tauri shell already spawns + supervises the myra-server sidecar; we just
+  # pin it to a known port (MYRA_DEV_PORT → the Rust ephemeral fallback) and bake
+  # NEXT_PUBLIC_MYRA_SERVER_URL at it, so the SAME backend is reachable from a
+  # plain browser at localhost:1420, not only the desktop window. Override the
+  # port with MYRA_SERVER_PORT.
+  app)        p="${MYRA_SERVER_PORT:-4319}"
+              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" bun run tauri:dev ;;
+  app-demo)   p="${MYRA_SERVER_PORT:-4319}"
+              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" bun run tauri:demo ;;
   build)
     # Bundle the app. Long cargo compile, plain output (no TUI) like app/web.
     # Can't exec here — we want to offer to launch the result afterwards.
