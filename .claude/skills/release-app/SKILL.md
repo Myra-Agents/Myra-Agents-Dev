@@ -136,6 +136,27 @@ gh run list --repo Myra-Agents/Myra-Agents --workflow=release.yml --limit 1
 - **Apple notarization can return HTTP 403** intermittently (or if the Apple dev
   agreement lapsed). It's usually transient — `gh run rerun --failed <run-id>`
   clears it; if it persists, the agreement needs re-signing at the Apple portal.
+- **Updater signing-key failure** — if every platform dies at the sign step with
+  `failed to decode secret key: incorrect updater private key password: Wrong
+  password for that key`, that's the Tauri **updater** key, not notarize and not
+  the cascade (the sidecar download + notarize can succeed just before it). The
+  `TAURI_SIGNING_PRIVATE_KEY` secret and its `_PASSWORD` must be a matching pair,
+  and the committed `plugins.updater.pubkey` in `tauri.conf.json` must be from the
+  same keypair. Fix by rotating to a clean keypair and setting the secret straight
+  from the key file (verify the blast radius first — safe only if no shipped
+  release has published a working `latest.json`/`.sig`):
+  ```bash
+  bun x @tauri-apps/cli signer generate -w ~/.tauri/myra-updater.key --password ""   # NOT `bunx tauri` (v1, dies on sharp)
+  # copy ~/.tauri/myra-updater.key.pub content into tauri.conf.json plugins.updater.pubkey, commit + push
+  gh secret set TAURI_SIGNING_PRIVATE_KEY --repo Myra-Agents/Myra-Agents --body "$(cat ~/.tauri/myra-updater.key)"
+  gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --repo Myra-Agents/Myra-Agents --body ""
+  ```
+  Use `--body "$(cat …)"`, never `< file` (the shell keeps the trailing newline →
+  `Invalid symbol 10` decode error). Verify a key locally before trusting CI:
+  `TAURI_SIGNING_PRIVATE_KEY="$(cat KEY)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" bun x @tauri-apps/cli signer sign FILE`.
+  Only the secrets changed → **rerun** the failed run (`gh run rerun --failed <id>`),
+  no re-tag. Note: a `git tag -f` re-move of a published release tag is gated as
+  destructive — if the tag already shipped, cut the next patch instead.
 - Report the release URLs and the CI status plainly. If notarize is still running,
   say so rather than declaring "done".
 
