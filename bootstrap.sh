@@ -29,7 +29,7 @@ REPOS=(
   "hub:Nest"
   "server:Worker"
   "plugins:Plugins"
-  "harness:Harness"
+  "harness:Antenna"
 )
 # private repos — skipped (not fatal) when the gh account lacks access.
 # An outside / open-source contributor gets a working app+shared+plugins setup;

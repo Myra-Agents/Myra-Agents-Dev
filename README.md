@@ -49,7 +49,7 @@ The file is per-machine (gitignored).
 | `hub/`     | Nest        | Cloudflare Worker SaaS relay (Clerk)   | private |
 | `server/`  | Worker      | Rust worker binary (agent runner)      | private |
 | `plugins/` | Plugins     | runtime plugins (lang-agnostic)        | public  |
-| `harness/` | Harness     | embedded agent (deepagents, bun-built) | public  |
+| `harness/` | Antenna     | embedded agent (deepagents, bun-built) | public  |
 
 `shared/` is also pulled in as the `packages/shared` git submodule of **app** and **hub**
 (bootstrap re-points the submodule URL from the old `Gamma-Software` namespace to the org).
