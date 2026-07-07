@@ -66,8 +66,11 @@ app submodule already points at the latest `v*` tag.
 
 If shared needs releasing:
 
-1. In `shared/`: bump `package.json` `version`, commit `chore(release): vX.Y.Z` on
-   `develop`, merge to `main`, tag `vX.Y.Z`, push `main` + tag.
+1. In `shared/`: update **`shared/CHANGELOG.md`** — rename the `## [Unreleased]`
+   section to `## [X.Y.Z] — YYYY-MM-DD` (today's date) and add a fresh empty
+   `## [Unreleased]` above it. Then bump `package.json` `version`, commit
+   `chore(release): vX.Y.Z` (changelog + version together) on `develop`, merge to
+   `main`, tag `vX.Y.Z`, push `main` + tag.
 2. In `app/`: move the submodule pointer to the new tag and commit it —
    ```bash
    git -C app/packages/shared fetch --tags && git -C app/packages/shared checkout vX.Y.Z
@@ -113,18 +116,29 @@ If server needs releasing:
 1. Confirm the two pins are current (from Steps 1–2): the `packages/shared`
    submodule points at the latest shared tag, and `server-version.json` points at
    the freshly published `server-v*`.
-2. Bump the app version to the **same string in all four places**:
+2. **Update `app/CHANGELOG.md` first — this is load-bearing, not cosmetic.**
+   Release CI's `finalize` job `awk`s the `## [X.Y.Z]` block out of `CHANGELOG.md`
+   and publishes it **verbatim as the GitHub release notes**; the CHANGELOG is read
+   from the **tagged** commit, so it must be committed before the tag or the release
+   ships with tauri-action's generic stub body. Rename `## [Unreleased]` to
+   `## [X.Y.Z] — YYYY-MM-DD` (today's date), add a fresh empty `## [Unreleased]`
+   above it, and make sure the heading is exactly `## [X.Y.Z]` (matches `VERSION`,
+   i.e. the tag without its `v`) at the start of the line. Fold the unreleased work
+   into `### Added/Fixed/Changed`; if the section is empty, write the notes now from
+   the commits since the last tag.
+3. Bump the app version to the **same string in all four places**:
    `app/package.json`, `app/src-tauri/tauri.conf.json`, `app/src-tauri/Cargo.toml`,
    and the `app` package stanza in `app/src-tauri/Cargo.lock`.
-3. Stage the version bumps **plus** any dependency-pin changes (submodule pointer,
-   `server-version.json`) and commit `release: vX.Y.Z` on `develop`; push develop.
-4. Merge `develop` → `main`. `main` often carries earlier `release:` commits that
+4. Stage the version bumps, the `CHANGELOG.md` edit, **plus** any dependency-pin
+   changes (submodule pointer, `server-version.json`) and commit `release: vX.Y.Z`
+   on `develop`; push develop.
+5. Merge `develop` → `main`. `main` often carries earlier `release:` commits that
    were never back-merged, so this is usually a real merge, not a fast-forward; if
    the version files conflict, keep the **new** version. Push `main`.
-5. Tag `vX.Y.Z` on `main` and push the tag → fires `release.yml`, which downloads
+6. Tag `vX.Y.Z` on `main` and push the tag → fires `release.yml`, which downloads
    the sidecar, builds the signed + **notarized** macOS/Windows/Linux installers,
    and publishes the app release.
-6. Back-merge `main` → `develop` (fast-forward) and push, so the next release
+7. Back-merge `main` → `develop` (fast-forward) and push, so the next release
    starts from an aligned develop.
 
 ## Step 4 — verify & hand off
@@ -166,6 +180,12 @@ gh run list --repo Myra-Agents/Myra-Agents --workflow=release.yml --limit 1
   back-merge `main` → `develop`. Never commit straight to `main` (admin push
   bypasses branch protection — the "Bypassed rule violations" line is expected).
 - **Tag prefixes:** app + shared use `vX.Y.Z`; server uses `server-vX.Y.Z`.
+- **CHANGELOG is the release notes, and it's read from the tag.** App CI's
+  `finalize` job extracts the `## [X.Y.Z]` block from `app/CHANGELOG.md` and
+  publishes it as the GitHub release body. Always move `[Unreleased]` → `[X.Y.Z] —
+  <date>` in the **same commit that bumps the version**, before tagging. Heading
+  must be `## [X.Y.Z]` with the version matching the tag minus `v`. shared keeps its
+  own `CHANGELOG.md` too; server has none (Rust, no changelog).
 - **The order is the whole point.** shared/sidecar must be released **and their
   artifacts available** (Dist assets for the sidecar, submodule pointer for shared)
   before the app tag, because app CI consumes them at build time.
