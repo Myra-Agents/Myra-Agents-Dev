@@ -26,7 +26,6 @@ Go module + README + this file are tracked (the compiled `tui/.bin/` is ignored)
 | `hub/`     | Nest       | Cloudflare Worker SaaS relay      | private |
 | `server/`  | Worker     | Rust worker binary                | private |
 | `plugins/` | Plugins    | runtime plugins                   | public  |
-| `harness/` | Antenna    | embedded agent (deepagents, bun)  | public  |
 
 Each member has its own `CLAUDE.md` — read that when working **inside** a member.
 This file governs only the bootstrap scripts.
