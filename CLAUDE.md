@@ -6,6 +6,12 @@ shell scripts that clone every member repo into this directory and wire them
 together. Cloning this repo and running `./bootstrap.sh` produces a full dev
 workspace.
 
+> **Before any product-facing work on Myra** (features, UX, copy, product
+> trade-offs), read [`USECASE.md`](USECASE.md) and put yourself in the user's
+> shoes — who they are, what job they're doing, when they open Myra. It's the
+> mental map of the use cases Myra serves; a technically clean change that
+> ignores the real use case is still a regression.
+
 ```
 Myrastack/              ← this repo (clone = workspace root)
   bootstrap.sh  dev.sh  install.sh  README.md
