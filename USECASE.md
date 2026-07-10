@@ -1,136 +1,138 @@
 # Myra Agents — Use Cases
 
-> **But de ce fichier.** Contexte pour l'agent (toi, Claude). Avant de coder,
-> concevoir, écrire de la copy ou trancher un arbitrage produit sur Myra, **relis-le
-> et mets-toi à la place de l'utilisateur** : qui il est, quel job il essaie de
-> faire, à quel moment il ouvre Myra. Une décision technique qui ignore le use case
-> réel est une régression, même si le code est propre.
+> **Purpose of this file.** Context for the agent (you, Claude). Before coding,
+> designing, writing copy, or making a product trade-off on Myra, **re-read this
+> and put yourself in the user's shoes**: who they are, what job they're trying to
+> get done, when they open Myra. A technical decision that ignores the real use
+> case is a regression, even if the code is clean.
 >
-> Ce n'est **pas** une doc produit publique ni une liste de features. C'est la carte
-> mentale des besoins que Myra sert, pour que chaque choix reste ancré dans l'usage.
+> This is **not** public product docs nor a feature list. It's the mental map of
+> the needs Myra serves, so every choice stays grounded in real usage.
 
 ---
 
-## 1. Ce qu'est Myra (modèle mental)
+## 1. What Myra is (mental model)
 
-Myra Agents = **plateforme desktop open-source de planification d'agents IA**
-(app native macOS, Next.js 16 + Tauri, sidecar Rust). Positionnement de lancement :
-« Open-Source desktop AI agent scheduler platform » — **pas** « un Kanban qui lance
-des CLI ». Le Kanban est un moyen, pas la promesse.
+Myra Agents = **open-source desktop platform for scheduling AI agents** (native
+macOS app, Next.js 16 + Tauri, Rust sidecar). Launch positioning: "Open-Source
+desktop AI agent scheduler platform" — **not** "a Kanban that runs CLI agents."
+The Kanban is a means, not the promise.
 
-La promesse : **automatise le boulot répétitif pendant que tu dors.** Tu décris une
-tâche une fois, Myra fait tourner un agent (Claude Code, opencode, …) qui l'exécute
-tout seul, à l'heure dite, sur ton Mac, avec accès à tes outils.
+The promise: **automate the repetitive grunt work while you sleep.** You describe a
+task once, Myra runs an agent (Claude Code, opencode, …) that executes it on its
+own, on schedule, on your Mac, with access to your tools.
 
-Le flux de valeur, toujours le même :
+The value flow, always the same:
 
 ```
-DÉCLENCHEUR  →  AGENT  →  OUTILS  →  SORTIE
-(quand ?)       (qui ?)   (avec quoi ?) (quoi produit ?)
+TRIGGER      →  AGENT        →  TOOLS          →  OUTPUT
+(when?)         (who?)          (with what?)      (what it produces)
 
- time/cron      Claude Code   repo local     rapport Slack
- event (Slack)  opencode      Slack, Stripe  PR / commit
- manuel         CLI agent     GitHub, MCP    digest, fichier
+ time/cron      Claude Code      local repo        Slack report
+ event (Slack)  opencode         Slack, Stripe     PR / commit
+ manual         CLI agent        GitHub, MCP       digest, file
 ```
 
-Un use case Myra = **remplir ces 4 cases**. Quand tu conçois une feature, demande-toi
-laquelle des 4 tu touches et ce que ça change pour l'utilisateur en bout de chaîne.
+A Myra use case = **filling these 4 boxes.** When you design a feature, ask which
+of the 4 you're touching and what it changes for the user at the end of the chain.
 
 ---
 
-## 2. Les personas (dans l'ordre de réalité produit → vision)
+## 2. The personas (ordered product reality → vision)
 
-| Persona | Ce qu'il veut | État produit aujourd'hui |
+| Persona | What they want | Product state today |
 |---|---|---|
-| **Développeur** | Déléguer bugs, PRs, tests, revue, sécu sur ses repos | **Cœur mûr** — ~75 % de l'inventaire de use cases |
-| **Power user / ops** | Orchestrer des agents récurrents, workflows planifiés | Servi par le scheduler + triggers |
-| **Solo-founder** | « Automatise mon business » : reporting, churn, FAQ, finance | Servi par ~6 use cases Data & Research |
-| **Non-dev / grand public** | Automatisation ultra-simple, sans jargon | **Vision, pas encore réalité** — chantier produit |
+| **Developer** | Delegate bugs, PRs, tests, review, security on their repos | **Mature core** — ~75% of the use-case inventory |
+| **Power user / ops** | Orchestrate recurring agents, scheduled workflows | Served by the scheduler + triggers |
+| **Solo founder** | "Automate my business": reporting, churn, FAQ, finance | Served by ~6 Data & Research use cases |
+| **Non-dev / general public** | Dead-simple automation, no jargon | **Vision, not yet reality** — a product effort |
 
-> **Honnêteté brutale (à garder en tête).** L'inventaire actuel est massivement
-> orienté dev/eng. La vision vise tout le monde (cf. mémoire `product-vision-non-dev`).
-> Ne prétends jamais que Myra sert déjà bien le grand public : pour l'y amener, c'est
-> un chantier **produit**, pas éditorial ni cosmétique. Quand tu proposes du travail,
-> distingue « renforce le cœur dev » de « élargit vers le non-dev ».
+> **Brutal honesty (keep it in mind).** The current inventory is heavily dev/eng.
+> The vision targets everyone (see memory `product-vision-non-dev`). Never claim
+> Myra already serves the general public well: getting there is a **product**
+> effort, not editorial or cosmetic. When you propose work, distinguish "harden the
+> dev core" from "broaden toward non-dev."
 
 ---
 
-## 3. Les jobs-to-be-done (le catalogue réel)
+## 3. The jobs-to-be-done (the real catalog)
 
-Ancré sur `automations.csv` + `usecases/`. Le **cœur** validé = **agents planifiés
-(cron/schedules)** et **automatisations perso/répétitives**. Le reste gravite autour.
+Grounded in `automations.csv` + `usecases/`. The validated **core** = **scheduled
+agents (cron/schedules)** and **personal/repetitive automations**. Everything else
+orbits around it.
 
-### 3.1 Cœur — agents planifiés & automatisations répétitives
-La raison d'être. Une tâche chiante qui revient → un agent qui la fait seul, en boucle.
-- **Résumé quotidien des changements** (`Summarize changes daily`) — digest eng des PRs/commits des dernières 24 h, posté sur Slack.
-- **Slack Digest** (`Slack Digest Agent`) — roundup quotidien des messages qui demandent ton attention.
-- **Product Finance / Stripe** (`Product Finance Agent`) — rapport récurrent revenus/churn/reco, read-only.
-- **Product Analytics**, **Product FAQ**, **Customer health monitoring** — mêmes patterns récurrents côté solo-founder.
+### 3.1 Core — scheduled agents & repetitive automations
+The whole reason for being. A tedious task that keeps coming back → an agent that
+does it alone, on a loop.
+- **Daily change summary** (`Summarize changes daily`) — eng digest of the last 24h of PRs/commits, posted to Slack.
+- **Slack Digest** (`Slack Digest Agent`) — daily roundup of the messages that need your attention.
+- **Product Finance / Stripe** (`Product Finance Agent`) — recurring revenue/churn/reco report, read-only.
+- **Product Analytics**, **Product FAQ**, **Customer health monitoring** — same recurring patterns on the solo-founder side.
 
-### 3.2 Code review & qualité
-- Trouver les bugs critiques (`Find critical bugs`)
-- Assigner les reviewers de PR (`Assign PR reviewers`)
-- Ajouter de la couverture de test (`Add test coverage`)
-- Surveiller des invariants d'ingénierie (`Monitor engineering invariants`)
-- Générer de la doc (`Generate docs`)
+### 3.2 Code review & quality
+- Find critical bugs (`Find critical bugs`)
+- Assign PR reviewers (`Assign PR reviewers`)
+- Add test coverage (`Add test coverage`)
+- Monitor engineering invariants (`Monitor engineering invariants`)
+- Generate docs (`Generate docs`)
 
-### 3.3 Sécurité
-- Scanner la codebase pour des vulnérabilités (`Scan codebase for vulnerabilities`)
-- Trouver des vulnérabilités (`Find vulnerabilities`)
-- Remédier aux vulnérabilités de dépendances (`Remediate dependency vulnerabilities`)
+### 3.3 Security
+- Scan the codebase for vulnerabilities (`Scan codebase for vulnerabilities`)
+- Find vulnerabilities (`Find vulnerabilities`)
+- Remediate dependency vulnerabilities (`Remediate dependency vulnerabilities`)
 
 ### 3.4 Incidents & triage
-- Corriger les échecs de CI (`Fix CI failures`)
-- Corriger les bugs remontés dans Slack (`Fix bugs reported in Slack`)
-- Investiguer les incidents PagerDuty / issues Sentry / erreurs Datadog
-- Trier les issues Linear (`Triage Linear issues`)
+- Fix CI failures (`Fix CI failures`)
+- Fix bugs reported in Slack (`Fix bugs reported in Slack`)
+- Investigate PagerDuty incidents / Sentry issues / Datadog errors
+- Triage Linear issues (`Triage Linear issues`)
 
-### 3.5 Data & research (le pont vers le non-dev)
-Les seuls use cases **démontrables hors-dev** aujourd'hui (Stripe, Slack, analytics,
-FAQ, churn, daily summary). Ils visent le solo-founder, pas encore le grand public.
-C'est là que se joue l'élargissement de l'audience.
-
----
-
-## 4. Anatomie d'un use case (le gabarit)
-
-Chaque fichier `usecases/*` suit le même moule. Reconnais-le, respecte-le :
-
-1. **Rôle** — « You are my Slack Attention Digest assistant. »
-2. **Déclencheur** — `time` (cron) ou `event` (message Slack, webhook). Colonne `trigger` du CSV.
-3. **Outils** — Slack, Stripe, GitHub, MCP… Colonne `tools`. L'agent n'a que ce qu'on lui câble.
-4. **Scope / étapes** — instructions précises et bornées.
-5. **Format de sortie** — sections Markdown fixes, envoi vers une destination définie.
-6. **Garde-fous** — *systématiques* : `read-only`, `do not invent data`, `do not modify X`,
-   ne rien envoyer d'autre que le rapport final. **La confiance = la feature.** Un agent
-   autonome qui écrit sans garde-fou est un risque produit, pas une commodité.
-
-Quand tu génères ou édites un use case, ces 6 blocs doivent tous être présents et cohérents.
+### 3.5 Data & research (the bridge to non-dev)
+The only use cases **demonstrable outside dev** today (Stripe, Slack, analytics,
+FAQ, churn, daily summary). They target the solo founder, not yet the general
+public. This is where broadening the audience gets decided.
 
 ---
 
-## 5. Réflexe agent : se mettre à la place de l'utilisateur
+## 4. Anatomy of a use case (the template)
 
-Avant toute décision sur Myra, passe cette checklist :
+Every `usecases/*` file follows the same mold. Recognize it, respect it:
 
-- **Qui** ouvre cet écran / déclenche ce flux ? (dev ? solo-founder ? non-dev ?)
-- **Quel job** essaie-t-il de finir ? (une des cases §3, ou un manque ?)
-- **Quand / pourquoi** Myra tourne-t-il ? (planifié la nuit ? réaction à un event ? à la main ?)
-- **Que voit-il en bout de chaîne** ? (un rapport ? une PR ? rien = échec silencieux ?)
-- **Fait-il confiance au résultat** ? (garde-fous, honnêteté sur ce que l'agent a/n'a pas fait,
-   pas de toast de succès non demandé — cf. mémoire `feedback_no-unrequested-toasts`).
-- **Est-ce démontrable ?** Si le produit fait ce use case *mal*, ne le mets pas en avant.
-   « On ne montre que ce que le produit prouve. »
+1. **Role** — "You are my Slack Attention Digest assistant."
+2. **Trigger** — `time` (cron) or `event` (Slack message, webhook). CSV `trigger` column.
+3. **Tools** — Slack, Stripe, GitHub, MCP… CSV `tools` column. The agent only has what you wire up.
+4. **Scope / steps** — precise, bounded instructions.
+5. **Output format** — fixed Markdown sections, sent to a defined destination.
+6. **Guardrails** — *systematic*: `read-only`, `do not invent data`, `do not modify X`,
+   never send anything but the final report. **Trust is the feature.** An autonomous
+   agent that writes without guardrails is a product risk, not a convenience.
 
-Règle d'or, héritée de la ligne éditoriale : **le résultat est la star, l'outil est
-figurant.** L'utilisateur ne veut pas « un agent avec MCP » ; il veut « mon reporting
-s'écrit seul ». Optimise pour son résultat, pas pour la mécanique.
+When you generate or edit a use case, all 6 blocks must be present and consistent.
 
 ---
 
-## 6. Ce que Myra n'est pas (anti-use-cases)
+## 5. Agent reflex: put yourself in the user's shoes
 
-- Pas un IDE ni un copilote temps-réel — Myra est **asynchrone et autonome**, il tourne sans toi.
-- Pas un no-code web type Zapier/Make — c'est une **app native qui pilote vraiment le Mac**
-  (AX-driven), et c'est le moat. Un dashboard web qu'on clique n'est pas l'expérience visée.
-- Pas un chatbot — on ne bavarde pas avec Myra, on lui **délègue** une tâche bornée qui se re-exécute.
+Before any decision on Myra, run this checklist:
+
+- **Who** opens this screen / triggers this flow? (dev? solo founder? non-dev?)
+- **What job** are they trying to finish? (one of the §3 boxes, or a gap?)
+- **When / why** does Myra run? (scheduled overnight? reacting to an event? by hand?)
+- **What do they see at the end** of the chain? (a report? a PR? nothing = silent failure?)
+- **Do they trust the result?** (guardrails, honesty about what the agent did/didn't do,
+  no unrequested success toast — see memory `feedback_no-unrequested-toasts`).
+- **Is it demonstrable?** If the product does this use case *badly*, don't showcase it.
+  "We only show what the product proves."
+
+Golden rule, inherited from the editorial line: **the result is the star, the tool is
+an extra.** The user doesn't want "an agent with MCP"; they want "my reporting writes
+itself." Optimize for their result, not for the machinery.
+
+---
+
+## 6. What Myra is not (anti-use-cases)
+
+- Not an IDE or a real-time copilot — Myra is **async and autonomous**, it runs without you.
+- Not a web no-code tool like Zapier/Make — it's a **native app that actually drives the Mac**
+  (AX-driven), and that's the moat. A web dashboard you click is not the intended experience.
+- Not a chatbot — you don't chat with Myra, you **delegate** a bounded task that re-runs.
