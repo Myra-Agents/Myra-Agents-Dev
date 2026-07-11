@@ -22,6 +22,42 @@ runin() {
   ( cd "$ROOT/$1" && shift && exec "$@" )
 }
 
+# Pre-flight for `app`: the Tauri shell ADOPTS a myra-server already listening on
+# the dev port instead of spawning the freshly-built sidecar. So if one is up,
+# show its version and ask whether to reuse it (skip the sidecar rebuild) or kill
+# it and build + run a fresh one. Returns 0 to REUSE (caller skips the build),
+# non-zero to build fresh (nothing running, or the user chose rebuild).
+preflight_local_server() {
+  local port="$1" health ver pid ans
+  health=$(curl -fs -m1 "http://127.0.0.1:${port}/healthz" 2>/dev/null) || return 1
+  ver=$(printf '%s' "$health" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+  pid=$(lsof -nP -iTCP:"${port}" -sTCP:LISTEN -t 2>/dev/null | head -1)
+  # No terminal to prompt (piped / CI) → reuse whatever's there, don't kill blind.
+  if ! : >/dev/tty 2>/dev/null; then
+    echo "${c_dim}[dev] reusing myra-server on :${port} (v${ver:-?}) — no tty to prompt${c_rst}" >&2
+    return 0
+  fi
+  printf '%s\n' "${c_dim}myra-server already running on :${port} — version ${ver:-?} (pid ${pid:-?}).${c_rst}" >/dev/tty
+  printf '%s' "${c_dim}[r] reuse it, or [b] build & use a fresh one (kills the old)? [r/b] ${c_rst}" >/dev/tty
+  read -r ans </dev/tty || ans=r
+  case "$ans" in
+    b|B)
+      if [ -n "$pid" ]; then
+        echo "${c_dim}[dev] stopping old server (pid ${pid})…${c_rst}" >/dev/tty
+        kill "$pid" 2>/dev/null || true
+        local i=0
+        while curl -fs -m1 "http://127.0.0.1:${port}/healthz" >/dev/null 2>&1; do
+          i=$((i + 1)); [ "$i" -ge 10 ] && { kill -9 "$pid" 2>/dev/null || true; break; }
+          sleep 0.5
+        done
+      fi
+      return 1 ;; # build fresh
+    *)
+      echo "${c_dim}[dev] reusing the running server on :${port}${c_rst}" >/dev/tty
+      return 0 ;; # reuse → skip the sidecar rebuild
+  esac
+}
+
 usage() {
   cat <<EOF
 ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
@@ -135,9 +171,15 @@ case "${1:-help}" in
   # plain browser at localhost:1420, not only the desktop window. Override the
   # port with MYRA_SERVER_PORT.
   app)        p="${MYRA_SERVER_PORT:-4319}"
-              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" bun run tauri:dev ;;
+              reuse_env=()
+              preflight_local_server "$p" && reuse_env=(MYRA_SKIP_SIDECAR_BUILD=1)
+              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" \
+                ${reuse_env[@]+"${reuse_env[@]}"} bun run tauri:dev ;;
   app-demo)   p="${MYRA_SERVER_PORT:-4319}"
-              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" bun run tauri:demo ;;
+              reuse_env=()
+              preflight_local_server "$p" && reuse_env=(MYRA_SKIP_SIDECAR_BUILD=1)
+              runin app env MYRA_DEV_PORT="$p" NEXT_PUBLIC_MYRA_SERVER_URL="http://127.0.0.1:$p" \
+                ${reuse_env[@]+"${reuse_env[@]}"} bun run tauri:demo ;;
   build)
     # Bundle the app. Long cargo compile, plain output (no TUI) like app/web.
     # Can't exec here — we want to offer to launch the result afterwards.
