@@ -10,7 +10,7 @@ workspace.
 Myrastack/              ← this repo (clone = workspace root)
   bootstrap.sh  dev.sh  install.sh  README.md
   tui/                  ← Bubble Tea progress UI for bootstrap (Go, tracked)
-  app/  shared/  hub/  server/  plugins/   ← cloned by bootstrap, gitignored
+  app/  shared/  hub/  server/  harness/  plugins/   ← cloned by bootstrap, gitignored
 ```
 
 The member repos are **gitignored** (`.gitignore` lists `/app/`, `/shared/`, …)
@@ -29,6 +29,13 @@ Go module + README + this file are tracked (the compiled `tui/.bin/` is ignored)
 
 Each member has its own `CLAUDE.md` — read that when working **inside** a member.
 This file governs only the bootstrap scripts.
+
+> **`harness/` (Antenna) is the embedded agent brain.** deepagents, compiled with
+> `bun build --compile`, which the Rust worker bundles and spawns; it talks to a
+> single LLM endpoint — the **hub's OpenAI-compatible proxy** — so the OpenRouter
+> key, quota, and fallback cascade live server-side and nothing secret lands on the
+> user's machine. The full cross-repo target design lives in
+> **[`ARCHITECTURE.md`](ARCHITECTURE.md)** — read it before touching this workstream.
 
 ## Code index — locate things WITHOUT scanning the repos
 

@@ -53,6 +53,9 @@ The file is per-machine (gitignored).
 `shared/` is also pulled in as the `packages/shared` git submodule of **app** and **hub**
 (bootstrap re-points the submodule URL from the old `Gamma-Software` namespace to the org).
 The Rust **worker** is consumed by the app as a *prebuilt binary* (`./dev.sh sidecar`), not built from source here.
+The **harness** (`Antenna`) is a bun-compiled agent binary the worker embeds and spawns; the hub
+runs an OpenAI-compatible **LLM proxy** so the harness needs only one URL and zero secrets on the
+user's machine. See **[`ARCHITECTURE.md`](ARCHITECTURE.md)** for the full target design.
 
 ## Open-source contributors (no private access)
 
@@ -79,6 +82,7 @@ run them without those repos cloned.
 | `hub`        | local hub (Cloudflare Worker, `bun --watch`)            |
 | `hub-deploy` | `wrangler deploy` the hub                               |
 | `worker`     | Rust worker — `cargo run`, 127.0.0.1:4319               |
+| `harness`    | embedded agent harness (Antenna) — JSON task on stdin   |
 | `sidecar`    | download/build the prebuilt worker binary for the app  |
 | `shared-pull`| bump the shared submodule in app+hub to latest `main`   |
 | `check`      | all gates: tsc + biome + cargo check (app & worker)     |

@@ -36,6 +36,8 @@ ${c_grn}Myra dev targets${c_rst}  —  ./dev.sh <target>
   hub           local hub (Cloudflare Worker via bun --watch)
   hub-deploy    wrangler deploy the hub
   worker        Rust worker  (cargo run, 127.0.0.1:4319)
+  harness       embedded agent harness (Antenna) — reads a JSON task on stdin,
+                emits JSON-lines events on stdout. Points at \$MYRA_HUB_URL/v1.
   sidecar       download/build the prebuilt worker binary for the app
   sign [build|ci|release]  macOS code signing helper (app/scripts/macos-sign.sh)
                 build = local signed build · ci = push secrets · release = tag
@@ -65,7 +67,7 @@ EOF
 # render in the TUI when available and print plain otherwise.
 do_status() {
   ui_group status "git status"
-  for d in app shared hub server plugins; do
+  for d in app shared hub server harness plugins; do
     [ -d "$ROOT/$d/.git" ] || continue
     step_begin "$d"
     b=$(git -C "$ROOT/$d" branch --show-current 2>/dev/null)
@@ -76,7 +78,7 @@ do_status() {
 
 do_pull() {
   ui_group pull "ff-pull"
-  for d in app shared hub server plugins; do
+  for d in app shared hub server harness plugins; do
     [ -d "$ROOT/$d/.git" ] || continue
     step_begin "$d"
     if [ -n "$(git -C "$ROOT/$d" status --porcelain)" ]; then step_end skip "dirty"; continue; fi
@@ -181,6 +183,7 @@ case "${1:-help}" in
   hub)        runin hub  bun run dev ;;
   hub-deploy) runin hub  bun run deploy ;;
   worker)     runin server cargo run ;;
+  harness)    runin harness bun run dev ;;
   sidecar)    ui_run do_sidecar || exit 1 ;;
 
   sign)

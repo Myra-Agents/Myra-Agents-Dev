@@ -199,6 +199,10 @@ install_deps() {
     step_begin "worker: cargo fetch"
     ( cd "$ROOT/server" && cargo fetch --quiet ) && step_end ok || step_end warn "cargo fetch failed (continuing)"
   fi
+  if [ -d "$ROOT/harness" ]; then
+    step_begin "harness: bun install"
+    ( cd "$ROOT/harness" && bun install --silent ) && step_end ok || step_end warn "failed (continuing)"
+  fi
   # shared = types only (no build); plugins = lang-agnostic samples (no install)
   return 0
 }
@@ -226,6 +230,7 @@ gen_code_workspace() {
   add hub     "hub · CF Worker"
   add server  "worker · Rust worker"
   add plugins "plugins"
+  add harness "harness · embedded agent (Antenna)"
   add .       "· workspace (scripts)"
   # rust-analyzer projects — only the present Rust crates
   local ra=""
@@ -291,6 +296,7 @@ ${c_grn}✓ Workspace ready${c_rst} at $ROOT
   $(present hub)     hub/      Nest — Cloudflare Worker SaaS             ${c_dim}private${c_rst}
   $(present server)  server/   Worker — Rust sidecar binary              ${c_dim}private${c_rst}
   $(present plugins) plugins/  Plugins — runtime plugins                 ${c_dim}public${c_rst}
+  $(present harness) harness/  Antenna — embedded agent harness          ${c_dim}public${c_rst}
 EOF
 if [ -n "$SKIPPED" ]; then
   cat <<EOF

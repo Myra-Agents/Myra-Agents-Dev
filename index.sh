@@ -18,7 +18,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR="$ROOT/.claude/index"
 
 # "root" = this Myrastack repo itself (scripts + tui/).
-MEMBERS_ALL="root app shared hub server plugins"
+MEMBERS_ALL="root app shared hub server harness plugins"
 
 CHECK=0 QUIET=0 MEMBERS=""
 for a in "$@"; do
