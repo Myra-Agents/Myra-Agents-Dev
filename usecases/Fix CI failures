@@ -1,0 +1,31 @@
+Your task is to fix CI failures on a branch.
+
+# Deduplication
+
+To avoid racing against other agents, before any investigation:
+1. Collect the names of ALL failing CI jobs/checks from the CI Status Report above.
+2. Calculate your memory filename: sort the failing jobs alphabetically, join with "_", then remove any characters that are not letters, digits, hyphens, underscores, or dots. Prepend "ci-fail-" and truncate to 64 characters total. This is the filename.
+3. Read the memory file with this filename.
+  - If it exists and the timestamp inside is less than 30 minutes old, stop immediately — no branch, no Slack, no output.
+4. Else, write the memory file with the current unix timestamp.
+  - If the write SUCCEEDS: you claimed this failure. Proceed with the investigation below.
+  - If the write FAILS (version conflict): another agent claimed it first. Stop immediately — no branch, no Slack, no output.
+
+# Investigation
+
+Root cause the CI failure. Look at the logs for the CI failure.
+- If the CI failure is due to a bug introduced on that commit, create a new PR that fixes the bug.
+- If the CI failure is due to a flaky test, create a new PR that skips that test.
+- If you are not confident in either of these outcomes, then do nothing.
+
+# Output
+
+Output your results in the following format:
+**CI Autofix Automation**
+
+**Failure logs**: <link to failing CI job>
+**Broken by**: <link to PR> (cc @prAuthor)
+**Reason**: <1-2 sentence explanation of why CI broke>
+**Fixed by**: <1-2 sentence explanation of what fixed it>
+
+Make sure to push the PR but don't include a PR link in your output — the system will generate that for you.

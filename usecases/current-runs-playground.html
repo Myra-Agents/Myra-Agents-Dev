@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents — Current Runs Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;500;600;700&family=Sorts+Mill+Goudy&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #7F77DD;
+    --c-bg: #141415; --c-side: #171717; --c-line: #757575; --c-line-soft: #1D1D1E;
+    --c-op: #171717; --c-active: #232323;
+    --c-txt: #FFFFFF; --c-mut: #9C9A92; --c-sub: #CDCDCD; --c-op-t: #AFAFAF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #1a1a1c; color: #f2f2f4;
+    font-family: 'Lato', -apple-system, system-ui, sans-serif;
+    display: grid; grid-template-columns: 320px 1fr; height: 100vh; overflow: hidden;
+  }
+  /* CONTROLS */
+  .controls { background: #161618; border-right: 0.5px solid rgba(255,255,255,0.1); padding: 18px; overflow-y: auto; }
+  .controls h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .controls .sub { font-size: 12px; color: #6a6a6e; margin: 0 0 16px; }
+  .group { margin-bottom: 18px; }
+  .group > .head { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #6a6a6e; margin-bottom: 10px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 12.5px; }
+  .ctl { display: flex; align-items: center; gap: 8px; }
+  .row .val { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #9c9a92; min-width: 42px; text-align: right; }
+  input[type=range] { width: 120px; accent-color: var(--accent); }
+  input[type=color] { width: 28px; height: 22px; border: none; background: none; padding: 0; cursor: pointer; }
+  input[type=text] { background: #2a2a2c; color: #f2f2f4; border: 0.5px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+  select { background: #2a2a2c; color: #f2f2f4; border: 0.5px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+  .toggle { position: relative; width: 34px; height: 19px; flex-shrink:0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .track { position: absolute; inset: 0; background: #3a3a3c; border-radius: 20px; cursor: pointer; }
+  .track::before { content: ""; position: absolute; width: 15px; height: 15px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: .15s; }
+  .toggle input:checked + .track { background: var(--accent); }
+  .toggle input:checked + .track::before { transform: translateX(15px); }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .preset { font-size: 11.5px; padding: 5px 10px; background: #2a2a2c; border: 0.5px solid rgba(255,255,255,0.12); border-radius: 6px; cursor: pointer; color: #9c9a92; }
+  .preset:hover { background: #34343a; color: #f2f2f4; }
+  .cols { display: flex; flex-direction: column; gap: 7px; }
+  .col-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #9c9a92; cursor: pointer; }
+  .col-item input { accent-color: var(--accent); }
+  /* RIGHT */
+  .right { display: flex; flex-direction: column; overflow: hidden; }
+  .stage { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 24px; overflow: auto; }
+  .scaler { transform-origin: top center; }
+  /* WINDOW — exact figma px */
+  .win { width: 1440px; height: 1024px; background: var(--c-bg); border: 1px solid var(--c-line); border-radius: 15px; display: flex; overflow: hidden; font-family: 'Lato', sans-serif; }
+  /* sidebar */
+  .side { width: 259px; flex-shrink: 0; background: var(--c-side); border: 2px solid var(--c-line); border-right-width: 1px; border-radius: 15px 0 0 15px; display: flex; flex-direction: column; justify-content: space-between; }
+  .side-top { display: flex; align-items: center; padding: 9px 16px; height: 44px; gap: 10px; }
+  .tl { display: flex; gap: 10px; }
+  .tl span { width: 16px; height: 16px; border-radius: 10px; }
+  .side-icons { display: flex; gap: 12px; margin-left: 14px; color: #fff; }
+  .side-icons i { font-size: 14px; }
+  .side-content { display: flex; flex-direction: column; gap: 16px; padding-top: 0; }
+  .logo { display: flex; align-items: center; justify-content: center; gap: 8px; height: 44px; }
+  .logo svg { width: 40px; height: 37px; }
+  .logo .name { font-family: 'Sorts Mill Goudy', Georgia, serif; font-weight: 500; font-size: 20px; line-height: 30px; color: #fff; }
+  .nav-wrap { display: flex; flex-direction: column; gap: 4px; padding: 0 8px; }
+  .nav { display: flex; align-items: center; gap: 10px; height: 32px; padding: 4px 0 4px 8px; border-radius: 5px; }
+  .nav i { font-size: 18px; color: #fff; width: 24px; text-align: center; }
+  .nav span { font-size: 16px; font-weight: 600; color: #fff; }
+  .nav.active { background: var(--c-active); }
+  .side-footer { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 0 20px; }
+  .side-footer .nav-wrap { width: 100%; }
+  .side-footer .nav span { font-weight: 400; }
+  .ver { font-size: 10px; font-weight: 300; color: #fff; }
+  /* right side */
+  .content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { height: 42px; border-bottom: 1px solid var(--c-line); flex-shrink: 0; }
+  .app-wrap { flex: 1; display: flex; justify-content: center; padding-top: 34px; }
+  .app { width: 968px; }
+  .title-block { padding: 0 0 16px 6px; }
+  .title-block .t1 { font-size: 16px; font-weight: 500; color: #fff; margin: 0; }
+  .title-block .t2 { font-size: 12px; font-weight: 300; color: #fff; margin: 4px 0 0; }
+  .tagbar { display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+  .tagbar .tags-lbl { font-size: 12px; color: var(--c-mut); padding-right: 8px; }
+  .tag { display: inline-flex; align-items: center; padding: 4px 8px; font-size: 12px; border-radius: 16px; border: 1px solid; }
+  .tag.sched { background: #EEEDFE; border-color: #59529C; color: #59529C; }
+  .tag.brief { background: #E6F1FB; border-color: #285B8C; color: #285B8C; }
+  .tagbar .spacer { flex: 1; }
+  .tagbar i { color: var(--c-mut); font-size: 15px; }
+  /* status operations */
+  .ops { display: flex; gap: 10px; padding: 8px 0 4px; }
+  .sop { flex: 1; height: 64px; background: var(--c-op); border: 1px solid var(--c-line-soft); border-radius: 10px; display: flex; flex-direction: column; justify-content: center; padding-left: 18px; gap: 2px; }
+  .sop.sel { border-color: #8A8A8A; }
+  .sop .st { display: flex; align-items: center; gap: 4px; }
+  .sop .st .cd { width: 8px; height: 8px; border-radius: 8px; }
+  .sop .st .lbl { font-size: 12px; font-weight: 500; color: var(--c-op-t); }
+  .sop .ss { font-size: 10px; font-weight: 400; color: var(--c-sub); padding-left: 12px; }
+  .explain { font-size: 12px; color: var(--c-mut); margin: 0; padding-top: 4px; }
+  .showing { font-size: 12px; font-weight: 300; color: #fff; text-align: right; padding-top: 8px; }
+  /* list */
+  .list { background: var(--c-op); border: 1px solid var(--c-line-soft); border-radius: 10px; overflow: hidden; margin-top: 6px; }
+  .lrow { display: flex; align-items: center; }
+  .lhead { height: 40px; border-bottom: 1px solid var(--c-line-soft); }
+  .lhead .cell { font-size: 12px; font-weight: 400; color: #fff; }
+  .trow { height: 30px; border-bottom: 1px solid var(--c-line-soft); }
+  .trow.last { border-bottom: 1px dashed var(--c-line-soft); }
+  .cell { display: flex; align-items: center; }
+  .cell.c-task { width: 309px; flex-shrink: 0; padding-left: 9px; }
+  .cell.c-flex { flex: 1; padding: 0 9px; }
+  .cell.c-status { gap: 8px; }
+  .trow .cell { font-size: 12px; font-weight: 300; color: #fff; }
+  .cd-status { width: 8px; height: 8px; border-radius: 8px; background: var(--accent); }
+  .agent-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px; border: 1px solid var(--c-line-soft); border-radius: 2px; height: 20px; }
+  .agent-chip i { font-size: 13px; color: #fff; }
+  .agent-chip span { font-size: 12px; font-weight: 400; color: #fff; }
+  .c-agent { justify-content: space-between; padding-right: 11px; }
+  .c-agent .more { font-size: 16px; color: #fff; }
+  .list-foot { height: 30px; display: flex; align-items: center; justify-content: center; }
+  .list-foot span { font-size: 12px; font-weight: 300; color: var(--c-op-t); }
+  /* PROMPT */
+  .promptbar { border-top: 0.5px solid rgba(255,255,255,0.1); background: #161618; padding: 14px 18px; }
+  .promptbar .ph { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .promptbar .ph span { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #6a6a6e; }
+  #copyBtn { font-size: 12px; padding: 5px 12px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+  #prompt { font-size: 12.5px; line-height: 1.6; color: #c8c8cc; font-family: ui-monospace, Menlo, monospace; white-space: pre-wrap; max-height: 100px; overflow-y: auto; margin: 0; }
+</style>
+</head>
+<body>
+  <div class="controls">
+    <h1>Agents — Current Runs</h1>
+    <p class="sub">Maquette fidèle au Figma. Règle puis copie le prompt.</p>
+    <div class="presets" id="presets"></div>
+
+    <div class="group">
+      <span class="head">En-tête</span>
+      <div class="row"><span>Titre</span><span class="ctl"><input type="text" id="title" style="width:130px"></span></div>
+      <div class="row"><span>Sous-titre</span><span class="ctl"><input type="text" id="subtitle" style="width:130px"></span></div>
+      <div class="row"><span>Logo serif (Goudy)</span><div class="toggle"><input type="checkbox" id="serif"><span class="track"></span></div></div>
+    </div>
+
+    <div class="group">
+      <span class="head">Sections</span>
+      <div class="row"><span>Ligne Tags</span><div class="toggle"><input type="checkbox" id="showTags"><span class="track"></span></div></div>
+      <div class="row"><span>Opérations statut</span><div class="toggle"><input type="checkbox" id="showOps"><span class="track"></span></div></div>
+      <div class="row"><span>Phrase explicative</span><div class="toggle"><input type="checkbox" id="showExplain"><span class="track"></span></div></div>
+      <div class="row"><span>Compteur "Showing"</span><div class="toggle"><input type="checkbox" id="showCount"><span class="track"></span></div></div>
+    </div>
+
+    <div class="group">
+      <span class="head">Disposition</span>
+      <div class="row"><span>Largeur sidebar</span><span class="ctl"><input type="range" id="sideW" min="220" max="320" step="1"><span class="val" id="sideW-v"></span></span></div>
+      <div class="row"><span>Hauteur lignes</span><span class="ctl"><input type="range" id="rowH" min="24" max="48" step="2"><span class="val" id="rowH-v"></span></span></div>
+      <div class="row"><span>Radius opérations</span><span class="ctl"><input type="range" id="radius" min="0" max="20" step="1"><span class="val" id="radius-v"></span></span></div>
+      <div class="row"><span>Accent (dots)</span><input type="color" id="accent"></div>
+    </div>
+
+    <div class="group">
+      <span class="head">Table</span>
+      <div class="row"><span>Chip "Copilot" bordé</span><div class="toggle"><input type="checkbox" id="agentChip"><span class="track"></span></div></div>
+      <div class="row"><span>Menu ⋯ par ligne</span><div class="toggle"><input type="checkbox" id="rowMenu"><span class="track"></span></div></div>
+      <div class="row"><span>Dernière ligne pointillée</span><div class="toggle"><input type="checkbox" id="dashLast"><span class="track"></span></div></div>
+    </div>
+
+    <div class="group">
+      <span class="head">Colonnes</span>
+      <div class="cols" id="cols"></div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="stage" id="stage">
+      <div class="scaler" id="scaler">
+        <div class="win" id="win">
+          <div class="side" id="side">
+            <div>
+              <div class="side-top">
+                <div class="tl"><span style="background:#FF5C60"></span><span style="background:#FAC800"></span><span style="background:#35C759"></span></div>
+                <div class="side-icons"><i class="ti ti-layout-sidebar"></i><i class="ti ti-search"></i></div>
+              </div>
+              <div class="side-content">
+                <div class="logo">
+                  <svg viewBox="0 0 40 37" fill="#fff" aria-hidden="true"><circle cx="6" cy="18.5" r="5.5"/><circle cx="14" cy="5.8" r="5.5"/><circle cx="12" cy="31" r="5.5"/><circle cx="20" cy="18.5" r="5.5"/><circle cx="26" cy="5.8" r="5.5"/><circle cx="28" cy="31" r="5.5"/><circle cx="34" cy="18.5" r="5.5"/></svg>
+                  <span class="name" id="logoName">Myra Agents</span>
+                </div>
+                <div class="nav-wrap">
+                  <div class="nav active" id="nav0"><i class="ti ti-code"></i><span>Agents</span></div>
+                  <div class="nav"><i class="ti ti-calendar-clock"></i><span>Schedules</span></div>
+                  <div class="nav"><i class="ti ti-history"></i><span>History</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="side-footer">
+              <div class="nav-wrap"><div class="nav"><i class="ti ti-settings"></i><span>Settings</span></div></div>
+              <div class="ver">v0.1.0</div>
+            </div>
+          </div>
+
+          <div class="content">
+            <div class="topbar"></div>
+            <div class="app-wrap">
+              <div class="app">
+                <div class="title-block">
+                  <p class="t1" id="ttl">Agents</p>
+                  <p class="t2" id="sub">Lists all the running agents</p>
+                </div>
+
+                <div class="tagbar" id="tagbar">
+                  <span class="tags-lbl">Tags</span>
+                  <span class="tag sched">Scheduled</span>
+                  <span class="tag brief">brief</span>
+                  <span class="spacer"></span>
+                  <i class="ti ti-search"></i>
+                  <i class="ti ti-adjustments-horizontal"></i>
+                </div>
+
+                <div class="ops" id="ops"></div>
+                <p class="explain" id="explain">&ldquo;Needs you&rdquo; lists the operations where you need to steer the Agent. The idea is to reduce the &ldquo;Needs you&rdquo; operations so the Agents can run without you.</p>
+                <p class="showing" id="showing">Showing 4 of 16</p>
+
+                <div class="list">
+                  <div class="lrow lhead" id="lhead"></div>
+                  <div id="rows"></div>
+                  <div class="list-foot"><span>Showing 4 of 16 - Click to see all schedules</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="promptbar">
+      <div class="ph"><span>Prompt généré</span><button id="copyBtn">Copier</button></div>
+      <pre id="prompt"></pre>
+    </div>
+  </div>
+
+<script>
+const DEFAULTS = {
+  title:"Agents", subtitle:"Lists all the running agents", serif:true,
+  showTags:true, showOps:true, showExplain:true, showCount:true,
+  sideW:259, rowH:30, radius:10, accent:"#7F77DD",
+  agentChip:true, rowMenu:true, dashLast:true,
+  cols:{task:true, triggered:true, status:true, duration:true, agent:true}
+};
+const COLS=[
+  {key:"task",label:"Task name"},{key:"triggered",label:"Triggered"},
+  {key:"status",label:"Status"},{key:"duration",label:"Duration"},{key:"agent",label:"Agent"},
+];
+const STATUS={ backlog:["#888780","Backlog"], running:["#EF9F27","Running"], needs:["#7F77DD","Needs you"], done:["#639922","Done"] };
+const OPS=[
+  {k:"backlog", st:"Next tasks"},{k:"running", st:"In progress"},
+  {k:"needs", st:"Feedback - Review", sel:true},{k:"done", st:"Task done"},
+];
+const ROWS=[
+  {task:"Explore dark-mode palette", triggered:"May 31 at 9:59 PM", status:"needs", duration:"10 s", agent:"Copilot"},
+  {task:"Explore dark-mode palette", triggered:"May 31 at 9:59 PM", status:"needs", duration:"10 s", agent:"Copilot"},
+  {task:"Explore dark-mode palette", triggered:"May 31 at 9:59 PM", status:"needs", duration:"10 s", agent:"Copilot"},
+  {task:"Explore dark-mode palette", triggered:"May 31 at 9:59 PM", status:"needs", duration:"10 s", agent:"Copilot"},
+];
+const PRESETS={
+  "Figma (réf)": {...DEFAULTS, cols:{...DEFAULTS.cols}},
+  "Sans opérations": {...DEFAULTS, showOps:false, showExplain:false, cols:{...DEFAULTS.cols}},
+  "Compact": {...DEFAULTS, rowH:24, sideW:230, radius:8, showExplain:false, cols:{...DEFAULTS.cols}},
+  "Épuré": {...DEFAULTS, showTags:false, showExplain:false, serif:false, agentChip:false, dashLast:false, cols:{...DEFAULTS.cols}},
+  "Teal accent": {...DEFAULTS, accent:"#1D9E75", cols:{...DEFAULTS.cols}},
+};
+
+let state=JSON.parse(JSON.stringify(DEFAULTS));
+
+["sideW","rowH","radius"].forEach(id=>document.getElementById(id).addEventListener("input",()=>{state[id]=+document.getElementById(id).value;updateAll();}));
+["title","subtitle"].forEach(id=>document.getElementById(id).addEventListener("input",e=>{state[id]=e.target.value;updateAll();}));
+document.getElementById("accent").addEventListener("input",e=>{state.accent=e.target.value;updateAll();});
+["serif","showTags","showOps","showExplain","showCount","agentChip","rowMenu","dashLast"].forEach(id=>{
+  document.getElementById(id).addEventListener("change",e=>{state[id]=e.target.checked;updateAll();});
+});
+
+function buildCols(){
+  const c=document.getElementById("cols"); c.innerHTML="";
+  COLS.forEach(col=>{
+    const lbl=document.createElement("label"); lbl.className="col-item";
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=state.cols[col.key];
+    if(col.key==="task") cb.disabled=true;
+    cb.addEventListener("change",()=>{state.cols[col.key]=cb.checked;updateAll();});
+    lbl.appendChild(cb); lbl.appendChild(document.createTextNode(col.label));
+    c.appendChild(lbl);
+  });
+}
+function buildPresets(){
+  const p=document.getElementById("presets");
+  Object.keys(PRESETS).forEach(n=>{
+    const b=document.createElement("div"); b.className="preset"; b.textContent=n;
+    b.addEventListener("click",()=>{state=JSON.parse(JSON.stringify(PRESETS[n]));syncControls();updateAll();});
+    p.appendChild(b);
+  });
+}
+function syncControls(){
+  document.getElementById("title").value=state.title;
+  document.getElementById("subtitle").value=state.subtitle;
+  document.getElementById("sideW").value=state.sideW;
+  document.getElementById("rowH").value=state.rowH;
+  document.getElementById("radius").value=state.radius;
+  document.getElementById("accent").value=state.accent;
+  ["serif","showTags","showOps","showExplain","showCount","agentChip","rowMenu","dashLast"].forEach(id=>document.getElementById(id).checked=state[id]);
+  buildCols();
+}
+
+function renderPreview(){
+  document.documentElement.style.setProperty("--accent",state.accent);
+  document.getElementById("sideW-v").textContent=state.sideW+"px";
+  document.getElementById("rowH-v").textContent=state.rowH+"px";
+  document.getElementById("radius-v").textContent=state.radius+"px";
+
+  document.getElementById("side").style.width=state.sideW+"px";
+  document.getElementById("ttl").textContent=state.title;
+  document.getElementById("sub").textContent=state.subtitle;
+  const ln=document.getElementById("logoName");
+  ln.style.fontFamily=state.serif?"'Sorts Mill Goudy',Georgia,serif":"'Lato',sans-serif";
+  ln.style.fontSize=state.serif?"20px":"17px";
+
+  document.getElementById("tagbar").style.display=state.showTags?"flex":"none";
+  document.getElementById("explain").style.display=state.showExplain?"block":"none";
+  document.getElementById("showing").style.display=state.showCount?"block":"none";
+
+  const opsEl=document.getElementById("ops");
+  opsEl.style.display=state.showOps?"flex":"none";
+  opsEl.innerHTML=OPS.map(c=>{
+    const s=STATUS[c.k];
+    return `<div class="sop${c.sel?' sel':''}" style="border-radius:${state.radius}px">
+      <div class="st"><span class="cd" style="background:${s[0]}"></span><span class="lbl">${s[1]}</span></div>
+      <div class="ss">${c.st}</div></div>`;
+  }).join("");
+
+  const active=COLS.filter(c=>state.cols[c.key]);
+  function cellCls(k){ return k==="task"?"cell c-task":"cell c-flex"+(k==="status"?" c-status":"")+(k==="agent"?" c-agent":""); }
+  document.getElementById("lhead").innerHTML=active.map(c=>`<div class="${cellCls(c.key)}">${c.label}</div>`).join("");
+
+  document.getElementById("rows").innerHTML=ROWS.map((r,i)=>{
+    const cells=active.map(c=>{
+      if(c.key==="status"){
+        const s=STATUS[r.status];
+        return `<div class="cell c-flex c-status"><span class="cd-status" style="background:${s[0]}"></span><span>${s[1]}</span></div>`;
+      }
+      if(c.key==="agent"){
+        const chip=state.agentChip
+          ? `<span class="agent-chip"><i class="ti ti-robot"></i><span>${r.agent}</span></span>`
+          : `<span style="display:inline-flex;align-items:center;gap:4px"><i class="ti ti-robot" style="font-size:13px"></i>${r.agent}</span>`;
+        const menu=state.rowMenu?`<i class="ti ti-dots more"></i>`:"";
+        return `<div class="cell c-flex c-agent">${chip}${menu}</div>`;
+      }
+      const cls = c.key==="task" ? "cell c-task" : "cell c-flex";
+      return `<div class="${cls}">${r[c.key]}</div>`;
+    }).join("");
+    const last = i===ROWS.length-1 && state.dashLast ? " last" : "";
+    return `<div class="lrow trow${last}" style="height:${state.rowH}px">${cells}</div>`;
+  }).join("");
+}
+
+function updatePrompt(){
+  const p=[];
+  if(state.title!==DEFAULTS.title) p.push(`titre "${state.title}"`);
+  if(state.subtitle!==DEFAULTS.subtitle) p.push(`sous-titre "${state.subtitle}"`);
+  if(!state.serif) p.push("logo en sans-serif (Lato, pas Goudy)");
+  if(!state.showTags) p.push("sans la ligne Tags");
+  if(!state.showOps) p.push("sans les opérations statut");
+  if(!state.showExplain) p.push("sans la phrase explicative");
+  if(!state.showCount) p.push('sans le compteur "Showing 4 of 16"');
+  if(state.sideW!==DEFAULTS.sideW) p.push(`sidebar ${state.sideW}px`);
+  if(state.rowH!==DEFAULTS.rowH) p.push(`lignes de ${state.rowH}px`);
+  if(state.radius!==DEFAULTS.radius) p.push(`border-radius ${state.radius}px`);
+  if(state.accent.toUpperCase()!==DEFAULTS.accent) p.push(`accent ${state.accent}`);
+  if(!state.agentChip) p.push("agent sans chip bordé");
+  if(!state.rowMenu) p.push("sans menu ⋯ par ligne");
+  if(!state.dashLast) p.push("dernière ligne non pointillée");
+  const hidden=COLS.filter(c=>!state.cols[c.key]).map(c=>c.label);
+  if(hidden.length) p.push(`colonnes masquées : ${hidden.join(", ")}`);
+
+  const cols=COLS.filter(c=>state.cols[c.key]).map(c=>c.label).join(" / ");
+  let t=`Implémente la vue "${state.title}" de Myra Agents (Tauri + Next.js, fenêtre 1440×1024, fond #141415, radius 15px).\n`;
+  t+=`Sidebar 259px (#171717) : traffic lights + icônes sidebar/search en haut, logo fleur blanc + "Myra Agents" (Goudy 20px), nav Agents (actif, fond #232323) / Schedules / History (Lato 600 16px), footer Settings + v0.1.0.\n`;
+  t+=`Contenu (968px centré) : titre Lato 500 16px + sous-titre Lato 300 12px`;
+  if(state.showTags) t+=`, ligne Tags + chips Scheduled (#EEEDFE/#59529C) et brief (#E6F1FB/#285B8C) + icônes search/filter`;
+  if(state.showOps) t+=`, 4 opérations statut (#171717, border #1D1D1E, radius 10px) Backlog (#888780) / Running (#EF9F27) / Needs you (#7F77DD, sélectionnée border #8A8A8A) / Done (#639922) avec dot + titre #AFAFAF + sous-libellé #CDCDCD`;
+  if(state.showExplain) t+=`, phrase explicative #9C9A92`;
+  if(state.showCount) t+=`, "Showing 4 of 16" aligné droite`;
+  t+=`, puis liste (#171717, border #1D1D1E, radius 10px) — header 40px (${cols}, Lato 400 12px), lignes 30px (Lato 300 12px), Task name 309px puis colonnes flex.\n`;
+  t+=`Statut = dot 8px + label. Agent = chip bordé (#1D1D1E, radius 2px) icône robot + "Copilot"`;
+  if(state.rowMenu) t+=` + menu ⋯`;
+  t+=`. Dernière ligne en pointillé. Footer centré "Showing 4 of 16 - Click to see all schedules" (#AFAFAF). Police Lato partout, Goudy pour le logo.`;
+  if(p.length) t+=`\n\nAjustements vs réf : ${p.join(", ")}.`;
+  document.getElementById("prompt").textContent=t;
+}
+
+function fitScale(){
+  const stage=document.getElementById("stage");
+  const sc=Math.min(1,(stage.clientWidth-48)/1440);
+  document.getElementById("scaler").style.transform=`scale(${sc})`;
+  document.getElementById("scaler").style.height=(1024*sc)+"px";
+}
+function updateAll(){renderPreview();updatePrompt();fitScale();}
+window.addEventListener("resize",fitScale);
+
+document.getElementById("copyBtn").addEventListener("click",()=>{
+  navigator.clipboard.writeText(document.getElementById("prompt").textContent).then(()=>{
+    const b=document.getElementById("copyBtn"),t=b.textContent;b.textContent="Copié !";setTimeout(()=>b.textContent=t,1200);
+  });
+});
+
+const tabler=document.createElement("link");
+tabler.rel="stylesheet"; tabler.href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css";
+document.head.appendChild(tabler);
+
+buildPresets(); syncControls(); updateAll();
+</script>
+</body>
+</html>

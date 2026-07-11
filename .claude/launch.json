@@ -17,9 +17,10 @@
     },
     {
       "name": "landing",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4178", "--directory", "Myra-Agents.github.io"],
-      "port": 4178
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.22.1/bin:$PATH\"; cd Myra-Agents.github.io && npx next dev -p 4321"],
+      "port": 4321,
+      "autoPort": true
     }
   ]
 }
