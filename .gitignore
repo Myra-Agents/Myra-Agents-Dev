@@ -14,6 +14,9 @@
 # self-hosted GitHub Actions runner provisioned by runner.sh (downloaded + per-machine)
 /.actions-runner/
 
+# per-task git worktrees for member repos (see AGENTS.md "Worktrees for member repos")
+/worktrees/
+
 # junk
 .DS_Store
 *.bun-build
