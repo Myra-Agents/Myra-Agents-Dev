@@ -116,6 +116,35 @@ Accessing it needs a gh token with the `project` scope
 `gh project view 1 --owner Myra-Agents` and
 `gh project item-list 1 --owner Myra-Agents`.
 
+## PostHog instrumentation (org-wide)
+
+`app`, `hub` (Nest), and the landing site (`Myra-Agents.github.io`) all run
+PostHog analytics — one EU-cloud project (`200364`). When touching or adding
+any user-facing feature in any of these — new UI action, route, hook,
+agent-run outcome, settings toggle, CTA, backend endpoint, error path —
+**check whether it needs a PostHog probe and add one if missing, don't wait
+to be asked.**
+
+- `app`: typed `track()` + event union in `src/lib/posthog/events.ts`, wired
+  in the relevant hook (pattern: card_created/card_moved/agent_launch in
+  use-kanban, agent_run_completed/failed in use-agent-events,
+  schedule_created, settings_saved). Errors go through `captureError()` +
+  the React error boundaries.
+- `hub`: `packages/hub/src/core/posthog.ts` exports `capture()`/
+  `captureException()` — wire new events at the point they happen (worker
+  fetch handlers AND the `UserHub` Durable Object, not just the edge layer).
+- landing: no `posthog-js` package — raw `<script>` snippet in
+  `src/app/layout.tsx`, `window.posthog` is the only surface; use the shared
+  `src/lib/analytics.ts` `capture()` helper (added in PR
+  [#11](https://github.com/Myra-Agents/Myra-Agents.github.io/pull/11)) rather
+  than re-deriving the `window.posthog` shape each time.
+- Env tagging (`environment`/`service` super properties) is already wired in
+  all three — new events inherit it for free.
+- Full wiring details, dashboard IDs, and gotchas (dev-capture gating on app
+  only, replay/error-tracking needs a project-side toggle too) are in the
+  `posthog-setup` auto-memory — check it before assuming a surface isn't
+  covered.
+
 ## Working on the scripts
 
 - **`install.sh`** — the `curl | bash` entrypoint. Clones this repo to `MYRA_DIR`
@@ -199,6 +228,30 @@ bash -n bootstrap.sh && bash -n dev.sh && bash -n tui/ui.sh   # shell syntax
 ./bootstrap.sh --check                                         # toolchain probe, no clone
 ./bootstrap.sh --check --no-tui                                # force the plain fallback
 ```
+
+## Worktrees for member repos
+
+**Never edit `app/`, `shared/`, `hub/`, `server/`, `plugins/` on whatever branch
+happens to be checked out.** Each is the user's live checkout — switching its
+branch or leaving dirty state there clobbers work in progress they may have
+open in an editor/terminal. Before touching code in a member repo, create a
+git worktree for the task instead:
+
+```bash
+git -C app worktree add ../worktrees/app/<slug> -b feature/<slug> develop
+```
+
+- Worktrees live under the gitignored top-level `worktrees/<member>/<slug>/`
+  (sibling to the member dirs, not nested inside them).
+  `git -C <member> worktree add ../worktrees/<member>/<slug> -b <branch> develop`
+  branches off `develop` per the branching model below.
+- Do all editing, running, and testing inside that worktree path, not inside
+  `app/`/`shared/`/etc. directly.
+- Remove it when done: `git -C app worktree remove ../worktrees/app/<slug>`
+  (or `git worktree remove` from inside the worktree itself), then delete the
+  branch once merged.
+- Exception: read-only work (grepping, reading files, checking status) can use
+  the member dir directly — the rule is about not *mutating* the user's checkout.
 
 ## Branching
 
